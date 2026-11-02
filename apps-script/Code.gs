@@ -1,32 +1,47 @@
 /**
- * 사전 설문 응답 수집용 Google Apps Script
+ * 분리배출 디버깅 프로젝트 — 설문 응답 수집용 Google Apps Script
  *
  * 설정 방법은 저장소 README 의 "응답을 Google 스프레드시트로 받기" 를 참고하세요.
- * 응답은 스프레드시트의 '응답' 시트에 한 줄씩 쌓입니다.
+ * 사전 설문은 '사전' 시트, 사후 설문은 '사후' 시트에 한 줄씩 쌓입니다.
  * 새로운 문항이 추가되면 열이 자동으로 늘어납니다.
  */
 
-var SHEET_NAME = '응답';
+var SHEET_NAMES = { pre: '사전', post: '사후' };
+
+// 점수 열 이름 (응답 데이터의 키 → 시트 열 제목)
+var SCORE_HEADERS = {
+  quizScore: '퀴즈점수',
+  quizTotal: '퀴즈문항수',
+  quiz_rinse: '세척_정답',
+  quiz_rinseTotal: '세척_문항수',
+  quiz_label: '라벨_정답',
+  quiz_labelTotal: '라벨_문항수',
+  quiz_material: '재질_정답',
+  quiz_materialTotal: '재질_문항수',
+};
 
 function doPost(e) {
   var lock = LockService.getScriptLock();
   lock.waitLock(10000);
   try {
     var payload = JSON.parse(e.postData.contents);
-    var answers = payload.answers || {};
-    var sheet = getSheet_();
+    var sheet = getSheet_(SHEET_NAMES[payload.phase] || '기타');
 
     var row = { '제출시각': payload.submittedAt || new Date().toISOString() };
+    var scores = payload.scores || {};
+    Object.keys(scores).forEach(function (key) {
+      row[SCORE_HEADERS[key] || key] = scores[key];
+    });
+    var answers = payload.answers || {};
     Object.keys(answers).forEach(function (key) {
       var value = answers[key];
       row[key] = Array.isArray(value) ? value.join(', ') : value;
     });
 
     var headers = ensureHeaders_(sheet, Object.keys(row));
-    var values = headers.map(function (h) {
+    sheet.appendRow(headers.map(function (h) {
       return row[h] === undefined ? '' : row[h];
-    });
-    sheet.appendRow(values);
+    }));
 
     return json_({ ok: true });
   } catch (err) {
@@ -40,9 +55,9 @@ function doGet() {
   return json_({ ok: true, message: '설문 수집 서버가 동작 중입니다.' });
 }
 
-function getSheet_() {
+function getSheet_(name) {
   var ss = SpreadsheetApp.getActiveSpreadsheet();
-  return ss.getSheetByName(SHEET_NAME) || ss.insertSheet(SHEET_NAME);
+  return ss.getSheetByName(name) || ss.insertSheet(name);
 }
 
 // 헤더 행에 없는 키가 있으면 오른쪽에 열을 추가하고, 최종 헤더 목록을 돌려준다

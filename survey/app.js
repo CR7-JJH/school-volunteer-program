@@ -3,16 +3,46 @@
 
   var SURVEY = window.SURVEY;
   var CONFIG = window.SURVEY_CONFIG || {};
-  var DRAFT_KEY = 'daeyoung-survey-draft-v1';
-  var LOCAL_SUBMISSIONS_KEY = 'daeyoung-survey-submissions-v1';
   var SCALE_LABELS = ['전혀 아니다', '아니다', '보통이다', '그렇다', '매우 그렇다'];
+  var UNKNOWN = { value: 'unknown', label: '잘 모르겠어요' };
+  var ERROR_TYPES = { rinse: '세척', label: '라벨·부착물', material: '재질' };
+
+  /* ---------- 설문 종류(사전/사후) 결정 ---------- */
+
+  var PHASE = (function () {
+    var param = new URLSearchParams(window.location.search).get('phase');
+    if (param && SURVEY.phases[param]) return param;
+    return SURVEY.phases[CONFIG.defaultPhase] ? CONFIG.defaultPhase : 'pre';
+  })();
+  var PHASE_INFO = SURVEY.phases[PHASE];
+
+  function inPhase(item) {
+    return !item.phase || item.phase === PHASE;
+  }
+
+  var SECTIONS = SURVEY.sections.filter(inPhase).map(function (s) {
+    return Object.assign({}, s, { questions: s.questions.filter(inPhase) });
+  });
+  var QUIZ = [];
+  SECTIONS.forEach(function (s) {
+    s.questions.forEach(function (q) {
+      if (q.type === 'quiz') {
+        q.required = true;
+        QUIZ.push(q);
+      }
+    });
+  });
+
+  var DRAFT_KEY = 'recycle-survey-draft-' + PHASE;
+  var SUBMITTED_KEY = 'recycle-survey-submitted-' + PHASE;
+  var LOCAL_SUBMISSIONS_KEY = 'recycle-survey-submissions';
 
   var app = document.getElementById('app');
   var progressBar = document.getElementById('progress-bar');
   var progressText = document.getElementById('progress-text');
 
   // step: -1 = 시작 화면, 0..n-1 = 설문 섹션, n = 완료 화면
-  var state = { step: -1, answers: {} };
+  var state = { step: -1, answers: {}, result: null };
 
   /* ---------- 저장소 (브라우저 저장소가 막혀 있어도 동작하도록) ---------- */
 
@@ -28,21 +58,19 @@
   function storageSet(key, value) {
     try {
       window.localStorage.setItem(key, JSON.stringify(value));
-    } catch (e) {
-      /* 무시 */
-    }
+    } catch (e) { /* 무시 */ }
   }
 
   function storageRemove(key) {
     try {
       window.localStorage.removeItem(key);
-    } catch (e) {
-      /* 무시 */
-    }
+    } catch (e) { /* 무시 */ }
   }
 
   function saveDraft() {
-    storageSet(DRAFT_KEY, { step: state.step, answers: state.answers });
+    if (state.step >= 0 && state.step < SECTIONS.length) {
+      storageSet(DRAFT_KEY, { step: state.step, answers: state.answers });
+    }
   }
 
   /* ---------- DOM 헬퍼 ---------- */
@@ -80,8 +108,12 @@
     return false;
   }
 
+  function optionsOf(q) {
+    return q.type === 'quiz' ? q.options.concat([UNKNOWN]) : q.options || [];
+  }
+
   function otherOption(q) {
-    return (q.options || []).filter(function (o) { return o.other; })[0];
+    return optionsOf(q).filter(function (o) { return o.other; })[0];
   }
 
   function otherKey(q) {
@@ -100,8 +132,8 @@
 
     if (q.required && isEmpty(v)) {
       if (q.type === 'consent') return '동의가 필요합니다.';
-      if (q.type === 'multi' || q.type === 'single' || q.type === 'scale') return '항목을 선택해주세요.';
-      return '내용을 입력해주세요.';
+      if (q.type === 'text' || q.type === 'textarea' || q.type === 'number') return '내용을 입력해주세요.';
+      return '항목을 선택해주세요.';
     }
     if (isEmpty(v)) return null;
 
@@ -121,21 +153,44 @@
     return null;
   }
 
+  // 퀴즈 채점: 총점과 오류 유형별 점수
+  function scoreQuiz() {
+    var scores = { quizScore: 0, quizTotal: QUIZ.length };
+    Object.keys(ERROR_TYPES).forEach(function (t) {
+      scores['quiz_' + t] = 0;
+      scores['quiz_' + t + 'Total'] = 0;
+    });
+    QUIZ.forEach(function (q) {
+      var correct = state.answers[q.id] === q.answer;
+      if (correct) scores.quizScore += 1;
+      if (q.errorType) {
+        scores['quiz_' + q.errorType + 'Total'] += 1;
+        if (correct) scores['quiz_' + q.errorType] += 1;
+      }
+    });
+    return scores;
+  }
+
   function buildPayload() {
     var answers = {};
-    SURVEY.sections.forEach(function (section) {
+    SECTIONS.forEach(function (section) {
       section.questions.forEach(function (q) {
         if (!isVisible(q)) return;
         var v = state.answers[q.id];
-        if (isEmpty(v) && q.type !== 'multi') return;
+        if (isEmpty(v)) {
+          if (q.type === 'multi') answers[q.id] = [];
+          return;
+        }
         if (q.type === 'number') v = Number(v);
         else if (typeof v === 'string') v = v.trim();
-        answers[q.id] = v === undefined ? [] : v;
+        answers[q.id] = v;
         if (isOtherSelected(q)) answers[otherKey(q)] = String(state.answers[otherKey(q)] || '').trim();
       });
     });
     return {
+      phase: PHASE,
       submittedAt: new Date().toISOString(),
+      scores: scoreQuiz(),
       answers: answers,
     };
   }
@@ -166,119 +221,114 @@
         onAnswerChange(q);
       },
     });
-    return el('label', { className: 'choice' }, [input, el('span', { className: 'choice-label', text: option.label })]);
+    var cls = 'choice' + (option === UNKNOWN ? ' unknown' : '');
+    return el('label', { className: cls }, [input, el('span', { className: 'choice-label', text: option.label })]);
+  }
+
+  function renderTextInput(q, value) {
+    return el('input', {
+      className: 'text-input' + (q.type === 'number' ? ' narrow' : ''),
+      type: 'text',
+      inputmode: q.type === 'number' ? 'numeric' : null,
+      id: 'q-' + q.id,
+      name: q.id,
+      maxlength: q.maxLength,
+      placeholder: q.placeholder,
+      autocomplete: 'off',
+      value: value || '',
+      oninput: function (e) {
+        state.answers[q.id] = e.target.value;
+        onAnswerChange(q, true);
+      },
+    });
+  }
+
+  function renderTextarea(q, value) {
+    var counter = el('div', { className: 'counter', text: (value || '').length + ' / ' + q.maxLength });
+    var area = el('textarea', {
+      className: 'text-input',
+      id: 'q-' + q.id,
+      name: q.id,
+      rows: '4',
+      maxlength: q.maxLength,
+      placeholder: q.placeholder,
+      oninput: function (e) {
+        state.answers[q.id] = e.target.value;
+        counter.textContent = e.target.value.length + ' / ' + q.maxLength;
+        onAnswerChange(q, true);
+      },
+    });
+    area.value = value || '';
+    return el('div', null, [area, counter]);
+  }
+
+  function renderChoices(q, value) {
+    var isMulti = q.type === 'multi';
+    var cls = 'choices' +
+      (q.layout === 'row' ? ' row' : '') +
+      (isMulti ? ' compact' : '') +
+      (q.type === 'quiz' ? ' stack' : '');
+    var group = el('div', { className: cls, role: isMulti ? 'group' : 'radiogroup' },
+      optionsOf(q).map(function (o) { return renderOptionInput(q, o, isMulti ? 'checkbox' : 'radio'); }));
+    var wrap = el('div', null, [group]);
+
+    var other = otherOption(q);
+    if (other && isOtherSelected(q)) {
+      wrap.appendChild(el('input', {
+        className: 'text-input other-input',
+        type: 'text',
+        maxlength: '30',
+        placeholder: '‘' + other.label + '’ 내용을 적어주세요',
+        'aria-label': other.label + ' 내용',
+        value: state.answers[otherKey(q)] || '',
+        oninput: function (e) {
+          state.answers[otherKey(q)] = e.target.value;
+          onAnswerChange(q, true);
+        },
+      }));
+    }
+
+    if (isMulti && q.max) {
+      var count = Array.isArray(value) ? value.length : 0;
+      wrap.appendChild(el('div', { className: 'counter', text: count + ' / ' + q.max + '개 선택' }));
+      // 최대 개수에 도달하면 나머지 선택지를 비활성화
+      Array.prototype.forEach.call(group.querySelectorAll('input'), function (input) {
+        input.disabled = count >= q.max && !input.checked;
+        input.parentNode.classList.toggle('disabled', input.disabled);
+      });
+    }
+    return wrap;
+  }
+
+  function renderScale(q, value) {
+    return el('div', { className: 'scale', role: 'radiogroup' }, [1, 2, 3, 4, 5].map(function (n) {
+      return el('label', { className: 'scale-item' }, [
+        el('input', {
+          type: 'radio',
+          name: q.id,
+          value: String(n),
+          checked: value === n,
+          onchange: function () {
+            state.answers[q.id] = n;
+            onAnswerChange(q);
+          },
+        }),
+        el('span', { className: 'scale-dot', text: String(n) }),
+        el('span', { className: 'scale-label', text: SCALE_LABELS[n - 1] }),
+      ]);
+    }));
   }
 
   function renderControl(q) {
     var value = state.answers[q.id];
-
     switch (q.type) {
       case 'text':
-      case 'number':
-        return el('input', {
-          className: 'text-input' + (q.type === 'number' ? ' narrow' : ''),
-          type: 'text',
-          inputmode: q.type === 'number' ? 'numeric' : null,
-          id: 'q-' + q.id,
-          name: q.id,
-          maxlength: q.maxLength,
-          placeholder: q.placeholder,
-          autocomplete: 'off',
-          value: value || '',
-          oninput: function (e) {
-            state.answers[q.id] = e.target.value;
-            onAnswerChange(q, true);
-          },
-        });
-
-      case 'textarea':
-        var counter = el('div', { className: 'counter', text: (value || '').length + ' / ' + q.maxLength });
-        var area = el('textarea', {
-          className: 'text-input',
-          id: 'q-' + q.id,
-          name: q.id,
-          rows: '4',
-          maxlength: q.maxLength,
-          placeholder: q.placeholder,
-          oninput: function (e) {
-            state.answers[q.id] = e.target.value;
-            counter.textContent = e.target.value.length + ' / ' + q.maxLength;
-            onAnswerChange(q, true);
-          },
-        });
-        area.value = value || '';
-        return el('div', null, [area, counter]);
-
+      case 'number': return renderTextInput(q, value);
+      case 'textarea': return renderTextarea(q, value);
       case 'single':
       case 'multi':
-        var group = el('div', {
-          className: 'choices' + (q.layout === 'row' ? ' row' : '') + (q.type === 'multi' ? ' compact' : ''),
-          role: q.type === 'single' ? 'radiogroup' : 'group',
-        }, q.options.map(function (o) {
-          return renderOptionInput(q, o, q.type === 'single' ? 'radio' : 'checkbox');
-        }));
-        var wrap = el('div', null, [group]);
-        var other = otherOption(q);
-        if (other && isOtherSelected(q)) {
-          wrap.appendChild(el('input', {
-            className: 'text-input other-input',
-            type: 'text',
-            maxlength: '30',
-            placeholder: '‘' + other.label + '’ 내용을 적어주세요',
-            'aria-label': other.label + ' 내용',
-            value: state.answers[otherKey(q)] || '',
-            oninput: function (e) {
-              state.answers[otherKey(q)] = e.target.value;
-              onAnswerChange(q, true);
-            },
-          }));
-        }
-        if (q.type === 'multi' && q.max) {
-          var count = Array.isArray(value) ? value.length : 0;
-          wrap.appendChild(el('div', { className: 'counter', text: count + ' / ' + q.max + '개 선택' }));
-          // 최대 개수에 도달하면 나머지 선택지를 비활성화
-          Array.prototype.forEach.call(group.querySelectorAll('input'), function (input) {
-            input.disabled = count >= q.max && !input.checked;
-            input.parentNode.classList.toggle('disabled', input.disabled);
-          });
-        }
-        return wrap;
-
-      case 'scale':
-        return el('div', { className: 'scale', role: 'radiogroup' }, [1, 2, 3, 4, 5].map(function (n) {
-          var input = el('input', {
-            type: 'radio',
-            name: q.id,
-            value: String(n),
-            checked: value === n,
-            onchange: function () {
-              state.answers[q.id] = n;
-              onAnswerChange(q);
-            },
-          });
-          return el('label', { className: 'scale-item' }, [
-            input,
-            el('span', { className: 'scale-dot', text: String(n) }),
-            el('span', { className: 'scale-label', text: SCALE_LABELS[n - 1] }),
-          ]);
-        }));
-
-      case 'consent':
-        return el('div', null, [
-          el('div', { className: 'consent-box', text: q.text }),
-          el('label', { className: 'choice consent-check' }, [
-            el('input', {
-              type: 'checkbox',
-              name: q.id,
-              checked: value === true,
-              onchange: function (e) {
-                state.answers[q.id] = e.target.checked ? true : undefined;
-                onAnswerChange(q);
-              },
-            }),
-            el('span', { className: 'choice-label', text: q.checkLabel }),
-          ]),
-        ]);
+      case 'quiz': return renderChoices(q, value);
+      case 'scale': return renderScale(q, value);
     }
     return null;
   }
@@ -286,9 +336,8 @@
   function renderQuestion(q) {
     if (!isVisible(q)) return null;
     var labelFor = q.type === 'text' || q.type === 'number' || q.type === 'textarea' ? 'q-' + q.id : null;
-    var titleTag = labelFor ? 'label' : 'div';
-    return el('fieldset', { className: 'question', 'data-qid': q.id }, [
-      el(titleTag, { className: 'question-title', for: labelFor }, [
+    return el('div', { className: 'question', role: labelFor ? null : 'group', 'data-qid': q.id, 'aria-labelledby': 't-' + q.id }, [
+      el(labelFor ? 'label' : 'div', { className: 'question-title', id: 't-' + q.id, for: labelFor }, [
         q.label,
         q.required ? el('span', { className: 'required', 'aria-label': '필수', text: '*' }) : null,
       ]),
@@ -301,7 +350,7 @@
   /* ---------- 화면 ---------- */
 
   function setProgress() {
-    var total = SURVEY.sections.length;
+    var total = SECTIONS.length;
     var done = state.step < 0 ? 0 : Math.min(state.step, total);
     progressBar.style.width = (done / total) * 100 + '%';
     progressText.textContent = state.step < 0
@@ -313,60 +362,74 @@
     setProgress();
     app.textContent = '';
     if (state.step < 0) renderIntro();
-    else if (state.step >= SURVEY.sections.length) renderDone();
+    else if (state.step >= SECTIONS.length) renderDone();
     else renderSection();
   }
 
   function renderIntro() {
     var draft = storageGet(DRAFT_KEY);
     var hasDraft = draft && draft.answers && Object.keys(draft.answers).length > 0;
+    var alreadySubmitted = !!storageGet(SUBMITTED_KEY);
+    var deadline = CONFIG.deadline && CONFIG.deadline[PHASE];
 
-    var actions = el('div', { className: 'actions' }, [
-      el('button', {
-        className: 'btn primary',
-        type: 'button',
-        text: hasDraft ? '이어서 작성하기' : '설문 시작하기',
-        onclick: function () {
-          if (hasDraft) {
-            state.answers = draft.answers;
-            state.step = Math.max(0, Math.min(draft.step, SURVEY.sections.length - 1));
-          } else {
-            state.step = 0;
-          }
-          go();
-        },
-      }),
-      hasDraft ? el('button', {
-        className: 'btn ghost',
-        type: 'button',
-        text: '처음부터 다시',
-        onclick: function () {
-          storageRemove(DRAFT_KEY);
-          state.answers = {};
-          state.step = 0;
-          go();
-        },
-      }) : null,
-    ]);
+    function start(fromDraft) {
+      if (fromDraft) {
+        state.answers = draft.answers;
+        state.step = Math.max(0, Math.min(draft.step, SECTIONS.length - 1));
+      } else {
+        storageRemove(DRAFT_KEY);
+        state.answers = {};
+        state.step = 0;
+      }
+      go();
+    }
 
-    var sectionList = el('ol', { className: 'section-list' }, SURVEY.sections.map(function (s) {
-      return el('li', { text: s.title });
-    }));
+    var actions;
+    if (alreadySubmitted && !hasDraft) {
+      actions = el('div', null, [
+        el('p', { className: 'notice', text: '이 기기에서 이미 ' + PHASE_INFO.label + '을 제출했어요. 참여해줘서 고마워요!' }),
+        el('div', { className: 'actions' }, [
+          el('button', {
+            className: 'btn ghost', type: 'button', text: '다른 사람이 이 기기로 응답하기',
+            onclick: function () { start(false); },
+          }),
+        ]),
+      ]);
+    } else {
+      actions = el('div', { className: 'actions' }, [
+        el('button', {
+          className: 'btn primary', type: 'button',
+          text: hasDraft ? '이어서 작성하기' : '설문 시작하기',
+          onclick: function () { start(hasDraft); },
+        }),
+        hasDraft ? el('button', {
+          className: 'btn ghost', type: 'button', text: '처음부터 다시',
+          onclick: function () { start(false); },
+        }) : null,
+      ]);
+    }
 
     app.appendChild(el('section', { className: 'card intro' }, [
-      el('p', { className: 'eyebrow', text: CONFIG.brand || '' }),
-      el('h1', { text: SURVEY.title }),
-      el('p', { className: 'lead', text: SURVEY.intro }),
-      CONFIG.deadline ? el('p', { className: 'deadline', text: '응답 마감: ' + CONFIG.deadline }) : null,
-      sectionList,
+      el('p', { className: 'eyebrow', text: '분리배출 디버깅 프로젝트 · ' + PHASE_INFO.label }),
+      el('h1', { text: PHASE_INFO.title }),
+      el('p', { className: 'lead', text: PHASE_INFO.intro }),
+      el('div', { className: 'slogan' }, [
+        el('span', { className: 'slogan-label', text: '버리기 전 3초 if문' }),
+        el('code', { text: 'if (비웠나 && 헹궜나 && 뗐나) → 재활용 TRUE' }),
+      ]),
+      el('ul', { className: 'meta-list' }, [
+        el('li', { text: '익명 설문 · 학번과 이름을 묻지 않아요' }),
+        el('li', { text: '퀴즈 ' + QUIZ.length + '문항 + 간단한 질문 · 약 3분' }),
+        deadline ? el('li', { text: '응답 마감: ' + deadline }) : null,
+      ]),
       !CONFIG.submitUrl ? el('p', { className: 'notice', text: '테스트 모드: 제출한 응답은 이 기기에만 저장됩니다.' }) : null,
       actions,
     ]));
   }
 
   function renderSection() {
-    var section = SURVEY.sections[state.step];
-    var isLast = state.step === SURVEY.sections.length - 1;
+    var section = SECTIONS[state.step];
+    var isLast = state.step === SECTIONS.length - 1;
 
     var form = el('form', {
       className: 'card',
@@ -385,14 +448,19 @@
       el('h2', { text: section.title }),
       section.description ? el('p', { className: 'lead', text: section.description }) : null,
       el('div', { className: 'questions' }, section.questions.map(renderQuestion)),
+      isLast ? el('p', { className: 'privacy', text: SURVEY.privacyNotice }) : null,
       el('p', { className: 'submit-error', role: 'alert' }),
       el('div', { className: 'actions split' }, [
-        el('button', {
-          className: 'btn ghost',
-          type: 'button',
-          text: '이전',
+        state.step > 0 ? el('button', {
+          className: 'btn ghost', type: 'button', text: '이전',
           onclick: function () {
             state.step -= 1;
+            go();
+          },
+        }) : el('button', {
+          className: 'btn ghost', type: 'button', text: '처음으로',
+          onclick: function () {
+            state.step = -1;
             go();
           },
         }),
@@ -402,15 +470,54 @@
     app.appendChild(form);
   }
 
+  function labelOf(q, value) {
+    var found = optionsOf(q).filter(function (o) { return o.value === value; })[0];
+    return found ? found.label : '-';
+  }
+
+  function renderResults(answers) {
+    var scores = scoreQuiz();
+    var typeSummary = Object.keys(ERROR_TYPES).map(function (t) {
+      var total = scores['quiz_' + t + 'Total'];
+      if (!total) return null;
+      return el('li', null, [
+        el('span', { text: ERROR_TYPES[t] }),
+        el('strong', { text: scores['quiz_' + t] + ' / ' + total }),
+      ]);
+    });
+
+    return el('div', { className: 'results' }, [
+      el('div', { className: 'score' }, [
+        el('span', { className: 'score-num', text: String(scores.quizScore) }),
+        el('span', { className: 'score-total', text: ' / ' + scores.quizTotal + ' 정답' }),
+      ]),
+      el('ul', { className: 'type-summary' }, typeSummary),
+      el('h3', { text: '정답과 해설' }),
+      el('ol', { className: 'review' }, QUIZ.map(function (q) {
+        var mine = answers[q.id];
+        var ok = mine === q.answer;
+        return el('li', { className: ok ? 'ok' : 'wrong' }, [
+          el('p', { className: 'review-q' }, [
+            el('span', { className: 'badge', text: ok ? '정답' : '오답' }),
+            q.label.replace(/^\d+\.\s*/, ''),
+          ]),
+          !ok ? el('p', { className: 'review-mine', text: '내 답: ' + labelOf(q, mine) }) : null,
+          el('p', { className: 'review-answer', text: '정답: ' + labelOf(q, q.answer) }),
+          el('p', { className: 'review-exp', text: q.explanation }),
+        ]);
+      })),
+    ]);
+  }
+
   function renderDone() {
     var testMode = !CONFIG.submitUrl;
-    var name = state.answers.name ? state.answers.name + ' 학생, ' : '';
     app.appendChild(el('section', { className: 'card done' }, [
       el('div', { className: 'done-icon', 'aria-hidden': 'true', text: '✓' }),
       el('h2', { text: '제출이 완료되었어요!' }),
-      el('p', { className: 'lead', text: name + '소중한 응답 고마워요. 매칭 결과는 담임선생님을 통해 안내될 예정입니다.' }),
+      el('p', { className: 'lead', text: '소중한 응답 고마워요. ' + PHASE_INFO.doneMessage }),
+      PHASE === 'post' ? renderResults(state.answers) : null,
       testMode ? el('p', { className: 'notice', text: '테스트 모드로 제출되어 이 기기에만 저장되었습니다.' }) : null,
-      testMode ? el('div', { className: 'actions' }, [
+      testMode ? el('div', { className: 'actions center' }, [
         el('button', { className: 'btn ghost', type: 'button', text: '저장된 응답 내려받기 (JSON)', onclick: downloadLocalSubmissions }),
       ]) : null,
     ]));
@@ -436,7 +543,7 @@
     if (node && node.classList.contains('has-error')) showError(node, validateQuestion(q));
     if (isTyping) return;
 
-    var section = SURVEY.sections[state.step];
+    var section = SECTIONS[state.step];
     var questionsWrap = app.querySelector('.questions');
     if (!questionsWrap || !section) return;
     var errors = {};
@@ -450,11 +557,14 @@
       questionsWrap.appendChild(rendered);
       if (errors[sq.id]) showError(rendered, validateQuestion(sq));
     });
-    var focusTarget = questionsWrap.querySelector('[data-qid="' + q.id + '"] input[value="' + cssEscape(String(state.answers[q.id])) + '"]')
-      || questionsWrap.querySelector('[data-qid="' + q.id + '"] input');
+
+    var scope = '[data-qid="' + q.id + '"] ';
+    var current = state.answers[q.id];
+    var focusTarget = (typeof current === 'string' && questionsWrap.querySelector(scope + 'input[value="' + cssEscape(current) + '"]')) ||
+      questionsWrap.querySelector(scope + 'input');
     if (focusTarget) focusTarget.focus({ preventScroll: true });
-    var otherInput = questionsWrap.querySelector('[data-qid="' + q.id + '"] .other-input');
-    if (otherInput && isOtherSelected(q) && isEmpty(state.answers[otherKey(q)])) otherInput.focus();
+    var otherInput = questionsWrap.querySelector(scope + '.other-input');
+    if (otherInput && isEmpty(state.answers[otherKey(q)])) otherInput.focus({ preventScroll: true });
   }
 
   function cssEscape(s) {
@@ -510,7 +620,8 @@
 
     request.then(function () {
       storageRemove(DRAFT_KEY);
-      state.step = SURVEY.sections.length;
+      storageSet(SUBMITTED_KEY, payload.submittedAt);
+      state.step = SECTIONS.length;
       render();
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }).catch(function () {
@@ -531,6 +642,7 @@
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  document.title = SURVEY.title;
+  document.title = '분리배출 디버깅 · ' + PHASE_INFO.label;
+  document.getElementById('topbar-title').textContent = '분리배출 디버깅 · ' + PHASE_INFO.label;
   render();
 })();

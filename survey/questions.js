@@ -1,38 +1,57 @@
 /**
- * 사전 설문 문항 정의
+ * 분리배출 디버깅 프로젝트 — 사전·사후 설문 문항
  *
- * 문항을 추가·수정하려면 이 파일만 고치면 됩니다.
+ * 사전·사후 설문은 같은 문항을 사용해 전후 변화를 비교합니다.
+ * phase: 'post' 가 붙은 섹션·문항은 사후 설문에만 나옵니다. ('pre' 는 사전 설문에만)
  *
  * 문항 타입(type)
- *   text      한 줄 입력          (maxLength, placeholder)
- *   textarea  여러 줄 입력        (maxLength, placeholder)
- *   number    숫자 입력           (min, max)
+ *   quiz      판별 퀴즈 (options, answer, errorType, explanation)
+ *             '잘 모르겠어요' 선택지가 자동으로 추가되며 오답으로 처리됩니다.
  *   single    하나만 선택         (options)
  *   multi     여러 개 선택        (options, min, max)
- *   scale     1~5 척도            (minLabel, maxLabel)
- *   consent   동의 체크박스       (text)
+ *   scale     1~5 척도
+ *   text / textarea  직접 입력    (maxLength, placeholder)
  *
- * 공통 속성
- *   id        응답 데이터의 키 (매칭 알고리즘에서 사용하므로 한 번 정하면 바꾸지 마세요)
- *   label     질문 문구
- *   help      보조 설명 (선택)
- *   required  필수 여부
- *   showIf    { question: '문항 id', equals: '값' } 조건이 맞을 때만 표시
+ * errorType (계획서 '오류 유형 분석' 기준)
+ *   rinse     내용물 미세척 (비웠나? 헹궜나?)
+ *   label     라벨·부착물 미제거 (뗐나?)
+ *   material  재질 혼동
  *
- * 선택지(options)는 { value, label } 형태입니다. value 는 저장되는 값, label 은 화면 표시용입니다.
+ * id 는 응답 데이터의 열 이름이 됩니다. 사전 설문을 배포한 뒤에는 바꾸지 마세요.
+ * 선택지는 { value, label } 형태입니다. value 는 저장되는 값, label 은 화면 표시용입니다.
  * { value: 'other', label: '기타', other: true } 처럼 other 를 주면 직접 입력칸이 함께 나옵니다.
  */
 window.SURVEY = {
-  title: '동아리 매칭 사전 설문',
-  intro:
-    '여러분의 관심사와 활동 성향을 바탕으로 잘 맞는 동아리를 찾아드리기 위한 설문입니다. ' +
-    '정답은 없으니 평소 나의 모습대로 편하게 답해주세요. 약 5분 정도 걸립니다.',
+  phases: {
+    pre: {
+      label: '사전 설문',
+      title: '분리배출, 나는 얼마나 알고 있을까?',
+      intro:
+        '우리 학교 분리수거함 속 ‘오류’를 찾는 분리배출 디버깅 프로젝트의 사전 설문입니다. ' +
+        '퀴즈 8문항과 간단한 질문으로 구성되어 있고 약 3분 걸립니다. ' +
+        '모르는 문제는 ‘잘 모르겠어요’를 골라도 괜찮아요. 찍지 말고 솔직하게 답해주세요!',
+      doneMessage:
+        '정답은 11월 13일(금)부터 분리수거함에 붙은 QR코드에서 확인할 수 있어요. ' +
+        '버리기 전 3초 if문, 잊지 마세요!',
+    },
+    post: {
+      label: '사후 설문',
+      title: '분리배출, 얼마나 달라졌을까?',
+      intro:
+        '분리배출 디버깅 프로젝트에 함께해줘서 고마워요! 캠페인 전과 비교하기 위해 사전 설문과 같은 퀴즈를 한 번 더 풀어요. ' +
+        '약 3분 걸리고, 제출하면 정답과 해설을 바로 확인할 수 있어요.',
+      doneMessage: '버리기 전 3초 if문: 비웠나? 헹궜나? 뗐나? → 재활용 TRUE',
+    },
+  },
+
+  privacyNotice:
+    '이 설문은 익명이며 학번·이름을 수집하지 않습니다. 응답은 캠페인 효과 분석에만 사용됩니다.',
 
   sections: [
     {
       id: 'basic',
-      title: '기본 정보',
-      description: '매칭 결과를 안내하기 위한 정보입니다.',
+      title: '시작하기',
+      description: '응답 비교를 위해 학년만 알려주세요.',
       questions: [
         {
           id: 'grade',
@@ -43,185 +62,218 @@ window.SURVEY = {
           options: [
             { value: '1', label: '1학년' },
             { value: '2', label: '2학년' },
-            { value: '3', label: '3학년' },
           ],
         },
-        { id: 'classNo', type: 'number', label: '반', required: true, min: 1, max: 20, placeholder: '예: 3' },
-        { id: 'studentNo', type: 'number', label: '번호', required: true, min: 1, max: 50, placeholder: '예: 15' },
-        { id: 'name', type: 'text', label: '이름', required: true, maxLength: 20, placeholder: '홍길동' },
       ],
     },
 
     {
-      id: 'interest',
-      title: '관심 분야와 진로',
-      description: '어떤 분야에 마음이 가는지 알려주세요.',
+      id: 'quiz1',
+      title: '분리배출 판별 퀴즈 ①',
+      description: '어떻게 버리는 것이 올바른지 골라주세요. (1~4번)',
       questions: [
         {
-          id: 'interests',
+          id: 'q1Pet',
+          type: 'quiz',
+          errorType: 'label',
+          label: '1. 음료가 조금 남아 있고 라벨이 붙은 페트병은?',
+          options: [
+            { value: 'as_is', label: '그대로 플라스틱 수거함에 넣는다' },
+            { value: 'cap_only', label: '뚜껑만 따로 빼서 플라스틱 수거함에 넣는다' },
+            { value: 'clean_label', label: '내용물을 비우고 헹군 뒤, 라벨을 떼어 플라스틱으로 버린다' },
+            { value: 'general', label: '음료가 남아 있으니 일반쓰레기로 버린다' },
+          ],
+          answer: 'clean_label',
+          explanation: '비우고 → 헹구고 → 라벨(비닐)을 떼서 페트병은 플라스틱으로, 라벨은 비닐류로 버려요. 찌그러뜨린 뒤 뚜껑을 닫으면 더 좋아요.',
+        },
+        {
+          id: 'q2CupNoodle',
+          type: 'quiz',
+          errorType: 'rinse',
+          label: '2. 국물 자국이 배어서 씻어도 지워지지 않는 컵라면 용기(스티로폼)는?',
+          options: [
+            { value: 'styrofoam', label: '스티로폼으로 분리배출한다' },
+            { value: 'plastic', label: '플라스틱 수거함에 넣는다' },
+            { value: 'paper', label: '종이류로 버린다' },
+            { value: 'general', label: '일반쓰레기로 버린다' },
+          ],
+          answer: 'general',
+          explanation: '깨끗한 스티로폼은 재활용되지만, 음식물이 배어 지워지지 않으면 재활용이 어려워 일반쓰레기(종량제 봉투)로 버려요.',
+        },
+        {
+          id: 'q3Takeout',
+          type: 'quiz',
+          errorType: 'material',
+          label: '3. 종이 슬리브가 끼워져 있고 빨대가 꽂힌 테이크아웃 플라스틱 컵은?',
+          options: [
+            { value: 'all_plastic', label: '통째로 플라스틱 수거함에 넣는다' },
+            { value: 'split', label: '컵은 헹궈 플라스틱, 슬리브는 종이, 빨대는 일반쓰레기로 나눠 버린다' },
+            { value: 'straw_only', label: '컵과 슬리브는 플라스틱, 빨대만 일반쓰레기로 버린다' },
+            { value: 'all_general', label: '재질이 섞여 있으니 전부 일반쓰레기로 버린다' },
+          ],
+          answer: 'split',
+          explanation: '재질마다 따로 버려요. 빨대처럼 작은 플라스틱은 선별 과정에서 걸러지기 어려워 일반쓰레기로 버려요.',
+        },
+        {
+          id: 'q4Milk',
+          type: 'quiz',
+          errorType: 'rinse',
+          label: '4. 급식으로 마신 우유팩은?',
+          options: [
+            { value: 'carton', label: '비우고 헹궈 펼쳐 말린 뒤, 종이팩으로 따로 모은다' },
+            { value: 'paper', label: '신문·상자 같은 종이류와 함께 버린다' },
+            { value: 'plastic', label: '안쪽이 코팅되어 있으니 플라스틱으로 버린다' },
+            { value: 'general', label: '일반쓰레기로 버린다' },
+          ],
+          answer: 'carton',
+          explanation: '우유팩은 질 좋은 펄프로 만들어져 일반 종이와 따로 모아야 화장지 등으로 재활용돼요. 남은 우유는 꼭 헹궈 주세요.',
+        },
+      ],
+    },
+
+    {
+      id: 'quiz2',
+      title: '분리배출 판별 퀴즈 ②',
+      description: '어떻게 버리는 것이 올바른지 골라주세요. (5~8번)',
+      questions: [
+        {
+          id: 'q5Receipt',
+          type: 'quiz',
+          errorType: 'material',
+          label: '5. 매점·편의점에서 받은 영수증(반들반들한 감열지)은?',
+          options: [
+            { value: 'paper', label: '종이류로 버린다' },
+            { value: 'general', label: '일반쓰레기로 버린다' },
+            { value: 'vinyl', label: '비닐류로 버린다' },
+            { value: 'plastic', label: '플라스틱으로 버린다' },
+          ],
+          answer: 'general',
+          explanation: '감열지는 열에 반응하는 화학물질로 코팅되어 있어 종이로 재활용할 수 없어요. 일반쓰레기로 버려요.',
+        },
+        {
+          id: 'q6Snack',
+          type: 'quiz',
+          errorType: 'material',
+          label: '6. 다 먹은 과자 봉지(안쪽이 은색)는?',
+          options: [
+            { value: 'general', label: '은박이 있으니 일반쓰레기로 버린다' },
+            { value: 'can', label: '금속처럼 보이니 캔류로 버린다' },
+            { value: 'vinyl', label: '부스러기를 털어 내고 비닐류로 버린다' },
+            { value: 'paper', label: '종이류로 버린다' },
+          ],
+          answer: 'vinyl',
+          explanation: '과자 봉지는 여러 겹의 필름으로 된 비닐(OTHER)이라 비닐류로 버려요. 부스러기는 털어 주세요.',
+        },
+        {
+          id: 'q7Pen',
+          type: 'quiz',
+          errorType: 'material',
+          label: '7. 다 쓴 볼펜·샤프처럼 분리배출 표시가 없는 작은 플라스틱 제품은?',
+          options: [
+            { value: 'plastic', label: '플라스틱이니 플라스틱 수거함에 넣는다' },
+            { value: 'can', label: '금속 부품이 있으니 캔류로 버린다' },
+            { value: 'vinyl', label: '비닐류로 버린다' },
+            { value: 'general', label: '일반쓰레기로 버린다' },
+          ],
+          answer: 'general',
+          explanation: '여러 재질이 섞여 있고 분리배출 표시가 없는 작은 제품은 선별이 어려워 일반쓰레기로 버려요.',
+        },
+        {
+          id: 'q8Note',
+          type: 'quiz',
+          errorType: 'label',
+          label: '8. 다 쓴 스프링 노트는?',
+          options: [
+            { value: 'split', label: '스프링과 비닐 표지를 떼어 내고, 종이만 종이류로 버린다' },
+            { value: 'as_is', label: '통째로 종이류로 버린다' },
+            { value: 'general', label: '스프링이 있으니 일반쓰레기로 버린다' },
+            { value: 'can', label: '스프링이 금속이니 통째로 캔류로 버린다' },
+          ],
+          answer: 'split',
+          explanation: '스프링·비닐 코팅 표지처럼 종이가 아닌 부분을 떼어야 종이로 재활용돼요.',
+        },
+      ],
+    },
+
+    {
+      id: 'intention',
+      title: '실천 의지',
+      description: '각 문장이 지금의 나와 얼마나 가까운지 골라주세요.',
+      questions: [
+        { id: 'willEmpty', type: 'scale', label: '분리배출할 때 내용물을 비우고 헹궈서 버리겠다.', required: true },
+        { id: 'willLabel', type: 'scale', label: '라벨이나 부착물처럼 재질이 다른 부분은 떼어서 버리겠다.', required: true },
+        { id: 'willCheck', type: 'scale', label: '헷갈리는 물건은 버리기 전에 올바른 방법을 확인하겠다.', required: true },
+        { id: 'willTell', type: 'scale', label: '친구가 잘못 버리면 올바른 방법을 알려줄 수 있다.', required: true },
+      ],
+    },
+
+    {
+      id: 'habit',
+      title: '평소 분리배출 습관',
+      description: '안내판과 판별 웹페이지를 만드는 데 참고할게요.',
+      questions: [
+        {
+          id: 'confusingItems',
           type: 'multi',
-          label: '관심 있는 활동 분야를 골라주세요.',
-          help: '1개 이상, 최대 3개까지 선택할 수 있어요.',
+          label: '버릴 때 가장 헷갈리는 물건을 골라주세요.',
+          help: '최대 3개까지 선택할 수 있어요.',
           required: true,
           min: 1,
           max: 3,
           options: [
-            { value: 'science', label: '과학·탐구·실험' },
-            { value: 'it', label: 'IT·코딩·AI' },
-            { value: 'math', label: '수학·논리' },
-            { value: 'humanities', label: '인문·독서·토론' },
-            { value: 'language', label: '외국어·국제교류' },
-            { value: 'social', label: '사회·경제·시사' },
-            { value: 'art', label: '미술·디자인' },
-            { value: 'music', label: '음악·밴드·합창' },
-            { value: 'performance', label: '연극·댄스·공연' },
-            { value: 'media', label: '영상·사진·방송' },
-            { value: 'sports', label: '체육·스포츠' },
-            { value: 'volunteer', label: '봉사·환경·캠페인' },
-            { value: 'health', label: '보건·의학·생명' },
-            { value: 'cooking', label: '요리·공예·생활' },
+            { value: 'pet', label: '페트병' },
+            { value: 'cup', label: '플라스틱 컵' },
+            { value: 'paper_cup', label: '종이컵' },
+            { value: 'milk', label: '우유팩' },
+            { value: 'snack', label: '과자·젤리 봉지' },
+            { value: 'cup_noodle', label: '컵라면 용기' },
+            { value: 'can', label: '캔' },
+            { value: 'delivery', label: '배달·도시락 용기' },
+            { value: 'stationery', label: '문구류' },
             { value: 'other', label: '기타', other: true },
           ],
         },
         {
-          id: 'career',
+          id: 'mainReason',
           type: 'single',
-          label: '희망하는 진로 계열은 어디에 가까운가요?',
+          label: '분리배출을 제대로 하기 어려운 가장 큰 이유는?',
           required: true,
           options: [
-            { value: 'humanities', label: '인문·어문' },
-            { value: 'social', label: '사회·경영·법' },
-            { value: 'natural', label: '자연과학' },
-            { value: 'engineering', label: '공학·IT' },
-            { value: 'medical', label: '의약·보건' },
-            { value: 'education', label: '교육' },
-            { value: 'arts', label: '예술·체육' },
-            { value: 'undecided', label: '아직 정하지 못했어요' },
-          ],
-        },
-        {
-          id: 'careerDetail',
-          type: 'text',
-          label: '구체적으로 생각하는 꿈이나 직업이 있나요?',
-          help: '선택 사항이에요.',
-          maxLength: 50,
-          placeholder: '예: 소프트웨어 개발자, 간호사, 영상 PD',
-        },
-      ],
-    },
-
-    {
-      id: 'style',
-      title: '활동 성향',
-      description: '각 문장이 나와 얼마나 비슷한지 골라주세요.',
-      questions: [
-        { id: 'likeTeamwork', type: 'scale', label: '여러 사람과 함께 협업하는 활동이 즐겁다.', required: true },
-        { id: 'likeActive', type: 'scale', label: '몸을 움직이는 활동을 좋아한다.', required: true },
-        { id: 'likeCreative', type: 'scale', label: '무언가를 직접 만들거나 표현하는 것을 좋아한다.', required: true },
-        { id: 'likeAnalytic', type: 'scale', label: '궁금한 것을 깊이 탐구하고 분석하는 것을 좋아한다.', required: true },
-        { id: 'likeHelping', type: 'scale', label: '다른 사람을 돕는 활동에서 보람을 느낀다.', required: true },
-        { id: 'likeLeading', type: 'scale', label: '앞에 나서서 이끄는 역할을 맡고 싶다.', required: true },
-        {
-          id: 'workStyle',
-          type: 'single',
-          label: '어떤 방식으로 활동하는 것을 선호하나요?',
-          required: true,
-          options: [
-            { value: 'team', label: '팀으로 함께 프로젝트하기' },
-            { value: 'solo', label: '각자 맡은 작업에 집중하기' },
-            { value: 'both', label: '둘 다 좋아요' },
-          ],
-        },
-        {
-          id: 'commitment',
-          type: 'single',
-          label: '동아리 활동에 얼마나 시간을 쓸 수 있나요?',
-          required: true,
-          options: [
-            { value: 'regular', label: '정규 동아리 시간에만 참여하고 싶어요' },
-            { value: 'some', label: '가끔은 추가 활동도 괜찮아요' },
-            { value: 'high', label: '방과후·주말 활동도 적극 참여할 수 있어요' },
+            { value: 'unknown_rule', label: '올바른 방법을 잘 몰라서' },
+            { value: 'bother', label: '헹구고 떼는 것이 귀찮아서' },
+            { value: 'no_sink', label: '근처에 헹굴 곳이 없어서' },
+            { value: 'bin_sign', label: '분리수거함 표시가 헷갈려서' },
+            { value: 'others_dont', label: '다른 사람들도 잘 안 지켜서' },
+            { value: 'other', label: '기타', other: true },
           ],
         },
       ],
     },
 
     {
-      id: 'expect',
-      title: '기대와 경험',
-      description: '동아리에서 무엇을 얻고 싶은지 알려주세요.',
-      questions: [
-        {
-          id: 'goals',
-          type: 'multi',
-          label: '동아리 활동으로 가장 얻고 싶은 것은 무엇인가요?',
-          help: '최대 2개까지 선택할 수 있어요.',
-          required: true,
-          min: 1,
-          max: 2,
-          options: [
-            { value: 'career', label: '진로 탐색·학생부 기록' },
-            { value: 'skill', label: '전문 실력 향상' },
-            { value: 'contest', label: '대회 참가·수상' },
-            { value: 'friends', label: '새로운 친구·선후배' },
-            { value: 'hobby', label: '취미와 즐거움' },
-            { value: 'contribution', label: '봉사·사회 기여' },
-          ],
-        },
-        {
-          id: 'prevClub',
-          type: 'single',
-          label: '이전에 동아리 활동을 해본 적이 있나요?',
-          required: true,
-          layout: 'row',
-          options: [
-            { value: 'yes', label: '있어요' },
-            { value: 'no', label: '없어요' },
-          ],
-        },
-        {
-          id: 'prevClubDetail',
-          type: 'text',
-          label: '어떤 동아리였고, 계속하고 싶은지 알려주세요.',
-          maxLength: 100,
-          placeholder: '예: 과학탐구반 - 계속하고 싶어요',
-          showIf: { question: 'prevClub', equals: 'yes' },
-        },
-        {
-          id: 'newClubIdea',
-          type: 'textarea',
-          label: '새로 생겼으면 하는 동아리나 해보고 싶은 활동이 있나요?',
-          help: '선택 사항이에요. 매칭과 동아리 개설 참고 자료로 사용됩니다.',
-          maxLength: 300,
-          placeholder: '자유롭게 적어주세요.',
-        },
-        {
-          id: 'comment',
-          type: 'textarea',
-          label: '그 밖에 전하고 싶은 말이 있다면 적어주세요.',
-          help: '선택 사항이에요.',
-          maxLength: 300,
-          placeholder: '예: 친구 OOO와 같은 동아리를 원해요, 운동은 조금 어려워요 등',
-        },
-      ],
-    },
-
-    {
-      id: 'agree',
-      title: '제출 전 확인',
+      id: 'campaign',
+      phase: 'post',
+      title: '캠페인 참여',
       description: '마지막 단계입니다.',
       questions: [
         {
-          id: 'privacyAgree',
-          type: 'consent',
-          label: '개인정보 수집·이용 동의',
+          id: 'promiseBoard',
+          type: 'single',
+          label: '‘작은 약속’ 보드에 실천 약속을 적어 붙였나요?',
           required: true,
-          text:
-            '• 수집 항목: 학년, 반, 번호, 이름, 설문 응답\n' +
-            '• 이용 목적: 동아리 매칭 및 배정 결과 안내\n' +
-            '• 보유 기간: 해당 학년도 동아리 편성 완료 후 즉시 파기\n' +
-            '동의하지 않을 수 있으나, 이 경우 매칭에 참여할 수 없습니다.',
-          checkLabel: '위 내용을 확인했으며 개인정보 수집·이용에 동의합니다.',
+          layout: 'row',
+          options: [
+            { value: 'yes', label: '참여했어요' },
+            { value: 'no', label: '참여하지 않았어요' },
+          ],
+        },
+        {
+          id: 'campaignFeedback',
+          type: 'textarea',
+          label: '캠페인에 참여하며 느낀 점이나 학교에 바라는 점을 적어주세요.',
+          help: '선택 사항이에요.',
+          maxLength: 300,
+          placeholder: '예: QR 판별 페이지 덕분에 헷갈릴 때 바로 확인할 수 있었어요.',
         },
       ],
     },
