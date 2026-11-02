@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="동아리 매칭을 위한 사전 설문">
+  <title>동아리 매칭 사전 설문</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="topbar-inner">
+      <span class="topbar-title">동아리 매칭 사전 설문</span>
+      <span class="progress-text" id="progress-text" aria-live="polite"></span>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress-bar" id="progress-bar"></div></div>
+  </header>
+
+  <main class="container" id="app" aria-live="polite">
+    <noscript><p class="card">이 설문은 자바스크립트가 필요합니다. 브라우저 설정을 확인해주세요.</p></noscript>
+  </main>
+
+  <script src="config.js"></script>
+  <script src="questions.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
