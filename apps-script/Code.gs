@@ -113,6 +113,9 @@ function ensureHeaders_(sheet, keys) {
   var headers = lastCol > 0 ? sheet.getRange(1, 1, 1, lastCol).getValues()[0] : [];
   var missing = keys.filter(function (k) { return headers.indexOf(k) === -1; });
   if (missing.length) {
+    // 새 시트는 26열로 시작하므로, 모자라면 열을 늘린다 (사후 설문은 28열)
+    var need = headers.length + missing.length - sheet.getMaxColumns();
+    if (need > 0) sheet.insertColumnsAfter(sheet.getMaxColumns(), need);
     sheet.getRange(1, headers.length + 1, 1, missing.length).setValues([missing]);
     sheet.setFrozenRows(1);
     headers = headers.concat(missing);
