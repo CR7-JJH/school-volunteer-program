@@ -27,8 +27,10 @@
 | 평소 습관 | 헷갈리는 품목(최대 3개), 어려운 이유 | ✓ | ✓ |
 | 캠페인 참여 | '작은 약속' 보드 참여 여부, 소감 | | ✓ |
 
-- **사전 설문 주소:** `.../survey/`
-- **사후 설문 주소:** `.../survey/?phase=post`
+- **사전 설문:** https://cr7-jjh.github.io/school-volunteer-program/survey/
+- **사후 설문:** https://cr7-jjh.github.io/school-volunteer-program/survey/?phase=post
+
+(GitHub Pages를 켠 뒤부터 열립니다.)
 
 퀴즈 문항은 계획서의 오류 유형에 맞춰 분류되어 있고, 유형별 점수가 함께 저장됩니다.
 
@@ -69,8 +71,8 @@
 
 ## 배포 (GitHub Pages)
 
-1. 저장소 **Settings → Pages**에서 브랜치를 선택하고 루트(`/`)로 배포합니다.
-2. `https://<계정>.github.io/<저장소>/survey/` 주소를 QR코드로 만들어 배포합니다.
+1. 저장소 **Settings → Pages**에서 Source를 **Deploy from a branch**, 브랜치를 **main / (root)**로 저장합니다.
+2. 1~2분 뒤 https://cr7-jjh.github.io/school-volunteer-program/survey/ 가 열리면, 이 주소를 QR코드로 만들어 배포합니다.
 
 ## 일정 연계
 
