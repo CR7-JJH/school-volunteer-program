@@ -7,6 +7,7 @@
  * 새로운 문항이 추가되면 열이 자동으로 늘어납니다.
  */
 
+var SPREADSHEET_NAME = '분리배출 디버깅 응답';
 var SHEET_NAMES = { pre: '사전', post: '사후' };
 
 // 점수 열 이름 (응답 데이터의 키 → 시트 열 제목)
@@ -60,8 +61,38 @@ function doPost(e) {
   }
 }
 
+// 브라우저에서 웹 앱 주소(/exec)를 열면 연결 상태를 보여준다
 function doGet() {
-  return json_({ ok: true, message: '설문 수집 서버가 동작 중입니다.' });
+  try {
+    var ss = getSpreadsheet_();
+    return json_({ ok: true, message: '설문 수집 서버가 동작 중입니다.', spreadsheet: ss.getName(), url: ss.getUrl() });
+  } catch (err) {
+    return json_({ ok: false, error: String(err) });
+  }
+}
+
+// 편집 화면에서 이 함수를 선택하고 ▶ 실행하면 권한 승인과 연결 확인을 할 수 있다
+function checkSetup() {
+  var ss = getSpreadsheet_();
+  Logger.log('연결된 스프레드시트: ' + ss.getName());
+  Logger.log('주소: ' + ss.getUrl());
+}
+
+// 스프레드시트에서 만든 Apps Script 면 그 시트를, 따로 만든 프로젝트면
+// '분리배출 디버깅 응답' 스프레드시트를 내 드라이브에 새로 만들어 사용한다
+function getSpreadsheet_() {
+  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  if (ss) return ss;
+  var props = PropertiesService.getScriptProperties();
+  var id = props.getProperty('SPREADSHEET_ID');
+  if (id) {
+    try {
+      return SpreadsheetApp.openById(id);
+    } catch (e) { /* 삭제된 경우 새로 만든다 */ }
+  }
+  ss = SpreadsheetApp.create(SPREADSHEET_NAME);
+  props.setProperty('SPREADSHEET_ID', ss.getId());
+  return ss;
 }
 
 function appendRow_(sheet, row) {
@@ -72,7 +103,7 @@ function appendRow_(sheet, row) {
 }
 
 function getSheet_(name) {
-  var ss = SpreadsheetApp.getActiveSpreadsheet();
+  var ss = getSpreadsheet_();
   return ss.getSheetByName(name) || ss.insertSheet(name);
 }
 
