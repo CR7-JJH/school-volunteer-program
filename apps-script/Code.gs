@@ -2,7 +2,8 @@
  * 분리배출 디버깅 프로젝트 — 설문 응답 수집용 Google Apps Script
  *
  * 설정 방법은 저장소 README 의 "응답을 Google 스프레드시트로 받기" 를 참고하세요.
- * 사전 설문은 '사전' 시트, 사후 설문은 '사후' 시트에 한 줄씩 쌓입니다.
+ * 사전 설문은 '사전' 시트, 사후 설문은 '사후' 시트,
+ * 판별 웹페이지 접속·판별 기록은 '판별기록' 시트에 한 줄씩 쌓입니다.
  * 새로운 문항이 추가되면 열이 자동으로 늘어납니다.
  */
 
@@ -25,6 +26,18 @@ function doPost(e) {
   lock.waitLock(10000);
   try {
     var payload = JSON.parse(e.postData.contents);
+    if (payload.type === 'checker') {
+      appendRow_(getSheet_('판별기록'), {
+        '시각': payload.at || new Date().toISOString(),
+        '이벤트': payload.event === 'visit' ? '접속' : '판별',
+        '위치': payload.from || '',
+        '품목': payload.item || '',
+        '결과': payload.bin || '',
+        '할일수': payload.fixes === undefined ? '' : payload.fixes,
+      });
+      return json_({ ok: true });
+    }
+
     var sheet = getSheet_(SHEET_NAMES[payload.phase] || '기타');
 
     var row = { '제출시각': payload.submittedAt || new Date().toISOString() };
@@ -38,11 +51,7 @@ function doPost(e) {
       row[key] = Array.isArray(value) ? value.join(', ') : value;
     });
 
-    var headers = ensureHeaders_(sheet, Object.keys(row));
-    sheet.appendRow(headers.map(function (h) {
-      return row[h] === undefined ? '' : row[h];
-    }));
-
+    appendRow_(sheet, row);
     return json_({ ok: true });
   } catch (err) {
     return json_({ ok: false, error: String(err) });
@@ -53,6 +62,13 @@ function doPost(e) {
 
 function doGet() {
   return json_({ ok: true, message: '설문 수집 서버가 동작 중입니다.' });
+}
+
+function appendRow_(sheet, row) {
+  var headers = ensureHeaders_(sheet, Object.keys(row));
+  sheet.appendRow(headers.map(function (h) {
+    return row[h] === undefined ? '' : row[h];
+  }));
 }
 
 function getSheet_(name) {

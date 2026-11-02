@@ -1,0 +1,287 @@
+:root {
+  --bg: #f3f6f4;
+  --surface: #ffffff;
+  --text: #1c2333;
+  --muted: #5e6880;
+  --border: #dde2e6;
+  --primary: #1f8a5b;
+  --primary-strong: #17704a;
+  --primary-soft: #e3f4eb;
+  --warn: #b26a00;
+  --warn-soft: #fff3dc;
+  --code-bg: #14211b;
+  --code-text: #d8f3e4;
+  --radius: 16px;
+  --shadow: 0 1px 2px rgba(20, 40, 30, 0.06), 0 6px 24px rgba(20, 40, 30, 0.06);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #101613;
+    --surface: #18211c;
+    --text: #e6ece8;
+    --muted: #9aa8a0;
+    --border: #2b3830;
+    --primary: #4cc78f;
+    --primary-strong: #6ed6a6;
+    --primary-soft: #1d3a2e;
+    --warn: #f1bd5a;
+    --warn-soft: #3a2f17;
+    --code-bg: #0b120e;
+    --shadow: none;
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', system-ui, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  word-break: keep-all;
+}
+
+.container { max-width: 640px; margin: 0 auto; padding: 20px 16px 32px; }
+
+h1, h2 { margin: 0; line-height: 1.3; outline: none; }
+
+code, .stage, .trace, .slogan { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+
+.btn {
+  appearance: none;
+  min-height: 52px;
+  padding: 0 20px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, transform 0.05s;
+}
+.btn:active { transform: scale(0.98); }
+.btn:focus-visible, .item:focus-visible, .link:focus-visible { outline: 3px solid var(--primary); outline-offset: 2px; }
+.btn.primary { background: var(--primary); color: #fff; }
+.btn.primary:hover { background: var(--primary-strong); }
+.btn.ghost { background: transparent; color: var(--text); border-color: var(--border); }
+.btn.ghost:hover { border-color: var(--primary); color: var(--primary); }
+
+.link {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 6px 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 15px;
+  cursor: pointer;
+}
+.link:hover { color: var(--primary); }
+
+/* ---------- 첫 화면 ---------- */
+
+.hero { padding: 12px 4px 20px; }
+.eyebrow { margin: 0 0 6px; color: var(--primary); font-size: 13px; font-weight: 700; letter-spacing: 0.03em; }
+.hero h1 { font-size: 30px; }
+.lead { margin: 8px 0 16px; color: var(--muted); }
+
+.slogan {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--code-bg);
+  color: var(--code-text);
+  font-size: 14px;
+  overflow-wrap: anywhere;
+}
+.slogan code { font-weight: 600; }
+.kw { color: #ff9e64; font-weight: 700; }
+.arrow { color: #7aa2f7; }
+.true { color: #9ece6a; font-weight: 800; }
+
+.search {
+  width: 100%;
+  margin-bottom: 20px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+}
+.search:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+
+.section-title { margin: 0 0 10px 4px; font-size: 16px; font-weight: 700; }
+.top5 { margin-bottom: 24px; }
+.top5 .item { border-color: var(--warn); background: var(--warn-soft); }
+
+.item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+
+.item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 60px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+.item:hover { border-color: var(--primary); background: var(--primary-soft); }
+.item-emoji { font-size: 26px; line-height: 1; flex-shrink: 0; }
+.item-name { font-size: 15px; line-height: 1.3; }
+.item-unknown { border-style: dashed; color: var(--muted); }
+.rank {
+  position: absolute;
+  top: -6px;
+  left: -6px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--warn);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 800;
+}
+.empty { color: var(--muted); font-size: 14px; margin: 8px 4px; }
+
+/* ---------- 질문·결과 카드 ---------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px 20px 24px;
+}
+
+.card-top { display: flex; justify-content: space-between; align-items: center; min-height: 36px; margin-bottom: 12px; }
+
+.dots { display: flex; gap: 6px; }
+.dot { width: 10px; height: 10px; border-radius: 50%; background: var(--border); }
+.dot.done { background: var(--primary); }
+.dot.now { background: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+
+.item-label { margin: 0 0 4px; color: var(--muted); font-weight: 600; }
+.stage { margin: 0 0 8px; color: var(--primary); font-size: 15px; font-weight: 700; }
+.stage .kw { color: var(--warn); }
+.ask { font-size: 24px; margin-bottom: 28px; }
+
+.yesno { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.yesno .btn { min-height: 72px; font-size: 20px; }
+/* 예/아니오는 같은 모양으로: 한쪽을 강조하면 답을 유도할 수 있음 */
+.btn.yes, .btn.no { background: var(--surface); color: var(--text); border: 2px solid var(--border); }
+.btn.yes:hover, .btn.no:hover { border-color: var(--primary); background: var(--primary-soft); }
+
+.choose { display: grid; gap: 8px; }
+.btn.option {
+  background: var(--surface);
+  border-color: var(--border);
+  color: var(--text);
+  text-align: left;
+  font-weight: 600;
+}
+.btn.option:hover { border-color: var(--primary); background: var(--primary-soft); }
+
+/* 결과 */
+.bin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  margin: 8px 0 16px;
+  padding: 24px 16px;
+  border-radius: 14px;
+  background: var(--bin);
+  color: #fff;
+  text-align: center;
+}
+.bin-caption { font-size: 14px; opacity: 0.85; }
+.bin-name { font-size: 36px; font-weight: 800; }
+.bin-flag {
+  margin-top: 4px;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.2);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.why { margin: 0 0 16px; padding: 12px 14px; border-radius: 10px; background: var(--bg); }
+
+.result-block { margin-top: 16px; }
+.block-title { font-size: 16px; margin-bottom: 8px; }
+.fixes { margin: 0; padding: 0; list-style: none; counter-reset: fix; display: grid; gap: 8px; }
+.fixes li {
+  counter-increment: fix;
+  position: relative;
+  padding: 12px 14px 12px 46px;
+  border-radius: 10px;
+  background: var(--warn-soft);
+  font-weight: 600;
+}
+.fixes li::before {
+  content: counter(fix);
+  position: absolute;
+  left: 14px;
+  top: 12px;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--warn);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.tip { margin: 16px 0 0; color: var(--muted); font-size: 15px; }
+
+.trace summary { cursor: pointer; color: var(--muted); font-size: 14px; padding: 4px 0; }
+.trace ol {
+  margin: 8px 0 0;
+  padding: 14px 16px;
+  list-style: none;
+  border-radius: 12px;
+  background: var(--code-bg);
+  color: var(--code-text);
+  font-size: 13px;
+  display: grid;
+  gap: 6px;
+}
+.trace li { display: flex; gap: 8px; }
+.trace-mark { flex-shrink: 0; width: 14px; text-align: center; font-weight: 800; }
+.trace-pass .trace-mark { color: #9ece6a; }
+.trace-fix .trace-mark { color: #ff9e64; }
+.trace-end .trace-mark, .trace-return .trace-mark { color: #7aa2f7; }
+.trace-stage { color: #ff9e64; }
+.trace-return { font-weight: 700; }
+
+.actions { display: grid; gap: 8px; margin-top: 24px; }
+
+.footer { padding: 0 16px 28px; text-align: center; color: var(--muted); font-size: 12px; }
+
+@media (max-width: 360px) {
+  .hero h1 { font-size: 26px; }
+  .ask { font-size: 21px; }
+  .item-grid { grid-template-columns: 1fr 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; }
+}
