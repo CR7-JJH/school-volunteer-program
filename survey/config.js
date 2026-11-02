@@ -4,7 +4,7 @@
 window.SURVEY_CONFIG = {
   // Google Apps Script 웹 앱 URL (apps-script/Code.gs 배포 후 발급).
   // 비워두면 "테스트 모드"로 동작하며 응답은 이 브라우저에만 저장됩니다.
-  submitUrl: '',
+  submitUrl: 'https://script.google.com/macros/s/AKfycbx2vGDYX3VAFVmepuNs-a3iS2tRLjZzwHcjdaFDPZvtlBUz_HNJXt7W2MBGiNvfABf0cQ/exec',
 
   // 기본 설문 종류: 'pre'(사전) 또는 'post'(사후)
   // 주소 뒤에 ?phase=post 를 붙이면 설정과 관계없이 사후 설문이 열립니다.
