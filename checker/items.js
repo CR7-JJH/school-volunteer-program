@@ -16,15 +16,18 @@
  *   why: checks 없이 바로 결과를 보여줄 때의 이유
  *
  * 사전·사후 설문 퀴즈의 정답과 같은 기준을 사용합니다. 퀴즈를 고치면 여기도 함께 확인하세요.
+ *
+ * 우리 학교 수거함 기준 (담당 선생님 확인)
+ *   종이팩(우유팩·종이컵) → 종이 수거함
+ *   스티로폼             → 일반쓰레기
+ *   캔·고철(스프링 등)   → 캔 수거함
  */
 window.BINS = {
   plastic: { label: '플라스틱', color: '#2f6fde' },
   can: { label: '캔·고철', color: '#6b7280' },
   paper: { label: '종이류', color: '#a0662b' },
-  carton: { label: '종이팩', color: '#0f8f86' },
   vinyl: { label: '비닐류', color: '#8b4fd1' },
   glass: { label: '유리병', color: '#2e8b3e' },
-  styrofoam: { label: '스티로폼', color: '#5b8db8' },
   general: { label: '일반쓰레기', color: '#3a3f4b' },
 };
 
@@ -84,26 +87,26 @@ window.ITEMS = [
     name: '우유팩',
     emoji: '🥛',
     keywords: '급식 우유 두유 주스팩 종이팩 멸균팩',
-    bin: 'carton',
+    bin: 'paper',
     checks: [
       { stage: 'empty', ask: '우유가 남아 있나요?', yes: { fix: '남은 우유를 개수대에 비워요.' } },
       { stage: 'rinse', ask: '안쪽에 우유가 묻어 있나요?', yes: { fix: '물로 헹궈요. 그대로 두면 냄새와 벌레의 원인이 돼요.' } },
       { stage: 'detach', ask: '빨대나 비닐이 붙어 있나요?', yes: { fix: '빨대와 비닐은 떼어 따로 버려요.' } },
     ],
-    note: '펼쳐서 말린 뒤 종이팩으로 따로 모아요. 우유팩은 질 좋은 펄프라 일반 종이와 섞이면 아까워요.',
+    note: '우리 학교는 종이팩을 종이 수거함에 버려요. 우유가 묻은 채로 넣으면 다른 종이까지 젖고 냄새가 나니, 헹군 뒤 펼쳐서 넣어 주세요.',
   },
   {
     id: 'papercup',
     name: '종이컵',
     emoji: '☕',
     keywords: '종이 컵 자판기 정수기 커피',
-    bin: 'carton',
+    bin: 'paper',
     checks: [
       { stage: 'empty', ask: '음료가 남아 있나요?', yes: { fix: '남은 음료를 비워요.' } },
       { stage: 'rinse', ask: '안쪽에 음료 자국이 남아 있나요?', yes: { fix: '물로 가볍게 헹궈요.' } },
       { stage: 'detach', ask: '플라스틱 뚜껑이 있나요?', yes: { fix: '뚜껑은 플라스틱으로 따로 버려요.' } },
     ],
-    note: '종이컵은 안쪽이 코팅되어 있어서 일반 종이가 아니라 종이팩과 함께 모아요. 따로 모으는 곳이 없다면 종이류와 섞이지 않게 묶어서 내요.',
+    note: '우리 학교는 종이컵도 종이 수거함에 버려요. 음료가 남아 있으면 다른 종이가 젖으니 꼭 비워 주세요.',
   },
   {
     id: 'can',
@@ -155,31 +158,22 @@ window.ITEMS = [
     name: '컵라면 용기 (스티로폼)',
     emoji: '🍜',
     keywords: '컵라면 라면 용기 스티로폼 컵 국물',
-    bin: 'styrofoam',
+    bin: 'general',
     checks: [
       { stage: 'empty', ask: '국물이나 건더기가 남아 있나요?', yes: { fix: '국물은 개수대에, 건더기는 음식물 쓰레기로 버려요.' } },
-      {
-        stage: 'rinse',
-        ask: '헹궈도 빨간 국물 자국이 지워지지 않나요?',
-        yes: { bin: 'general', why: '음식물이 밴 스티로폼은 재활용되지 않아요. 깨끗한 용기만 스티로폼으로 버려요.' },
-      },
-      { stage: 'detach', ask: '뚜껑이 붙어 있나요?', yes: { fix: '뚜껑은 떼어 일반쓰레기로 버려요.' } },
     ],
+    why: '우리 학교는 스티로폼을 일반쓰레기로 버려요. 플라스틱 수거함에 넣지 마세요!',
+    note: '국물이 남은 채로 버리면 쓰레기통이 새고 냄새가 나요.',
   },
   {
     id: 'styrofoam',
     name: '스티로폼 완충재',
     emoji: '📦',
     keywords: '스티로폼 상자 포장재 완충재 택배',
-    bin: 'styrofoam',
-    checks: [
-      { stage: 'detach', ask: '테이프나 스티커, 운송장이 붙어 있나요?', yes: { fix: '테이프·스티커·운송장을 모두 떼어요.' } },
-      {
-        stage: 'material',
-        ask: '색깔이 있거나 겉이 코팅된 스티로폼인가요?',
-        yes: { bin: 'general', why: '색깔이 있거나 코팅된 스티로폼은 재활용이 어려워요.' },
-      },
-    ],
+    bin: 'general',
+    checks: [],
+    why: '우리 학교는 스티로폼을 일반쓰레기로 버려요. 플라스틱 수거함에 넣지 마세요!',
+    note: '부피가 크면 잘게 부숴서 버려요.',
   },
   {
     id: 'paper',
@@ -209,7 +203,7 @@ window.ITEMS = [
     keywords: '노트 공책 스프링 책 문제집 교과서',
     bin: 'paper',
     checks: [
-      { stage: 'detach', ask: '스프링이 달려 있나요?', yes: { fix: '스프링은 빼서 캔·고철류로 버려요.' } },
+      { stage: 'detach', ask: '스프링이 달려 있나요?', yes: { fix: '스프링은 빼서 캔 수거함에 버려요.' } },
       { stage: 'detach', ask: '비닐 코팅된 표지가 있나요?', yes: { fix: '표지는 떼어 일반쓰레기로 버려요.' } },
     ],
     note: '종이가 아닌 부분을 떼어야 종이로 재활용돼요.',
@@ -294,9 +288,15 @@ window.UNKNOWN_ITEM = {
       { label: '플라스틱 (PP·PE·PS 등)', bin: 'plastic' },
       { label: '비닐류 (OTHER 등)', bin: 'vinyl' },
       { label: '종이', bin: 'paper' },
-      { label: '종이팩', bin: 'carton' },
+      { label: '종이팩', bin: 'paper' },
       { label: '캔류 (철·알미늄)', bin: 'can' },
       { label: '유리', bin: 'glass' },
+      {
+        label: '스티로폼',
+        bin: 'general',
+        end: true,
+        why: '우리 학교는 스티로폼을 일반쓰레기로 버려요.',
+      },
       {
         label: '표시가 없어요',
         bin: 'general',
