@@ -377,3 +377,5 @@ textarea.text-input { resize: vertical; min-height: 96px; }
   color: var(--primary);
 }
 .review li.wrong .badge { background: var(--danger); color: #fff; }
+
+a.btn { display: inline-flex; align-items: center; justify-content: center; text-decoration: none; }

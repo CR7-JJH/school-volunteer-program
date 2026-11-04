@@ -18,6 +18,23 @@
 | `survey/config.js` | 응답 전송 주소, 기본 설문 종류, 마감일 등 운영 설정 |
 | `apps-script/Code.gs` | 응답을 Google 스프레드시트에 저장하는 수집 스크립트 |
 
+## 기간별 공개 설정 (`site-config.js`)
+
+학생들이 지금 참여할 활동만 보이도록 `site-config.js`의 `open` 값으로 켜고 끕니다.
+
+| 날짜 | preSurvey | checker | postSurvey |
+| --- | :-: | :-: | :-: |
+| 11/4 ~ 11/9 사전 설문 | `true` | `false` | `false` |
+| 11/10 ~ 11/12 | `false` | `false` | `false` |
+| 11/13 ~ 11/24 캠페인 | `false` | `true` | `false` |
+| 11/25 ~ 11/27 사후 설문 | `false` | `true` | `true` |
+
+- `false`인 활동은 첫 화면에서 숨겨지고, 주소로 직접 들어와도 안내 문구만 보입니다.
+- 팀원 확인용: 주소 끝에 `?preview=1`을 붙이면 닫힌 페이지도 열립니다. 미리보기에서는 응답·판별 기록이 저장되지 않습니다.
+  - 판별기 미리보기: `.../checker/?preview=1`
+  - 사후 설문 미리보기: `.../survey/?phase=post&preview=1`
+- QR 인쇄 페이지(`checker/poster.html`)는 항상 열려 있습니다.
+
 ## 판별 웹페이지 (계획서 솔루션 ①)
 
 주소: https://cr7-jjh.github.io/school-volunteer-program/checker/

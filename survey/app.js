@@ -16,6 +16,12 @@
   })();
   var PHASE_INFO = SURVEY.phases[PHASE];
 
+  // 공개 여부 (../site-config.js). ?preview=1 이면 닫혀 있어도 열고, 응답은 저장하지 않는다
+  var PREVIEW = new URLSearchParams(window.location.search).get('preview') === '1';
+  var SITE = (window.SITE_CONFIG || {})[PHASE === 'post' ? 'postSurvey' : 'preSurvey'] || {};
+  var CLOSED = SITE.open === false && !PREVIEW;
+  var SUBMIT_URL = PREVIEW ? '' : CONFIG.submitUrl;
+
   function inPhase(item) {
     return !item.phase || item.phase === PHASE;
   }
@@ -358,7 +364,22 @@
       : state.step >= total ? '완료' : (state.step + 1) + ' / ' + total;
   }
 
+  function renderClosed() {
+    progressBar.style.width = '0%';
+    progressText.textContent = '';
+    app.textContent = '';
+    app.appendChild(el('section', { className: 'card done' }, [
+      el('div', { className: 'done-icon', 'aria-hidden': 'true', text: '🔒' }),
+      el('h2', { text: PHASE_INFO.label + '은 지금 열려 있지 않아요' }),
+      el('p', { className: 'lead', text: SITE.closedMessage || '' }),
+      el('div', { className: 'actions center' }, [
+        el('a', { className: 'btn ghost', href: '../', text: '첫 화면으로' }),
+      ]),
+    ]));
+  }
+
   function render() {
+    if (CLOSED) return renderClosed();
     setProgress();
     app.textContent = '';
     if (state.step < 0) renderIntro();
@@ -422,7 +443,8 @@
         el('li', { text: '퀴즈 ' + QUIZ.length + '문항 + 간단한 질문 · 약 3분' }),
         deadline ? el('li', { text: '응답 마감: ' + deadline }) : null,
       ]),
-      !CONFIG.submitUrl ? el('p', { className: 'notice', text: '테스트 모드: 제출한 응답은 이 기기에만 저장됩니다.' }) : null,
+      PREVIEW ? el('p', { className: 'notice', text: '미리보기: 응답이 시트에 저장되지 않아요. (팀원 확인용)' })
+        : !SUBMIT_URL ? el('p', { className: 'notice', text: '테스트 모드: 제출한 응답은 이 기기에만 저장됩니다.' }) : null,
       actions,
     ]));
   }
@@ -510,7 +532,7 @@
   }
 
   function renderDone() {
-    var testMode = !CONFIG.submitUrl;
+    var testMode = !SUBMIT_URL;
     app.appendChild(el('section', { className: 'card done' }, [
       el('div', { className: 'done-icon', 'aria-hidden': 'true', text: '✓' }),
       el('h2', { text: '제출이 완료되었어요!' }),
@@ -603,9 +625,9 @@
     button.textContent = '제출 중…';
 
     var request;
-    if (CONFIG.submitUrl) {
+    if (SUBMIT_URL) {
       // Apps Script 웹 앱은 CORS 응답을 주지 않으므로 no-cors + text/plain 으로 전송
-      request = fetch(CONFIG.submitUrl, {
+      request = fetch(SUBMIT_URL, {
         method: 'POST',
         mode: 'no-cors',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },

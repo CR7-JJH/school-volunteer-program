@@ -23,9 +23,38 @@
     <p class="eyebrow">대영고 R&amp;A 사회 참여 봉사</p>
     <h1>분리배출 디버깅 프로젝트</h1>
     <p class="lead">버리기 전 3초 if문: 비웠나? 헹궜나? 뗐나? → 재활용 TRUE</p>
-    <a href="checker/"><b>♻️ 분리배출 판별기</b><span>버릴 물건을 고르면 올바른 방법을 알려줘요</span></a>
-    <a href="survey/"><b>📝 사전 설문</b><span>분리배출 판별 퀴즈와 실천 의지 설문</span></a>
-    <a href="survey/?phase=post"><b>📊 사후 설문</b><span>캠페인 후 다시 풀어 보는 퀴즈 · 정답과 해설 제공</span></a>
+    <div id="links"></div>
+    <noscript>
+      <a href="survey/"><b>📝 사전 설문</b><span>분리배출 판별 퀴즈와 실천 의지 설문</span></a>
+    </noscript>
   </main>
+  <script src="site-config.js"></script>
+  <script>
+    (function () {
+      // site-config.js 에서 open: true 인 것만 보여준다
+      var SITE = window.SITE_CONFIG || {};
+      var LINKS = [
+        { key: 'preSurvey', href: 'survey/', title: '📝 사전 설문', desc: '분리배출 판별 퀴즈와 실천 의지 설문 · 약 3분' },
+        { key: 'checker', href: 'checker/', title: '♻️ 분리배출 판별기', desc: '버릴 물건을 고르면 올바른 방법을 알려줘요' },
+        { key: 'postSurvey', href: 'survey/?phase=post', title: '📊 사후 설문', desc: '캠페인 후 다시 풀어 보는 퀴즈 · 정답과 해설 제공' },
+      ];
+      var box = document.getElementById('links');
+      var shown = LINKS.filter(function (l) { return !SITE[l.key] || SITE[l.key].open !== false; });
+      shown.forEach(function (l) {
+        var a = document.createElement('a');
+        a.href = l.href;
+        var b = document.createElement('b'); b.textContent = l.title;
+        var span = document.createElement('span'); span.textContent = l.desc;
+        a.appendChild(b); a.appendChild(span);
+        box.appendChild(a);
+      });
+      if (!shown.length) {
+        var p = document.createElement('p');
+        p.className = 'lead';
+        p.textContent = '지금은 참여할 수 있는 활동이 없어요. 다음 활동을 기다려 주세요!';
+        box.appendChild(p);
+      }
+    })();
+  </script>
 </body>
 </html>

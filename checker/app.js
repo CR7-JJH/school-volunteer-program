@@ -7,7 +7,13 @@
   var ITEMS = window.ITEMS;
   var UNKNOWN = window.UNKNOWN_ITEM;
   var app = document.getElementById('app');
-  var from = new URLSearchParams(window.location.search).get('from') || '';
+  var params = new URLSearchParams(window.location.search);
+  var from = params.get('from') || '';
+
+  // 공개 여부 (../site-config.js). ?preview=1 이면 닫혀 있어도 열고, 기록은 남기지 않는다
+  var PREVIEW = params.get('preview') === '1';
+  var SITE = (window.SITE_CONFIG || {}).checker || {};
+  var CLOSED = SITE.open === false && !PREVIEW;
 
   /* ---------- 판별 엔진 ---------- */
 
@@ -72,7 +78,7 @@
   /* ---------- 기록 (선택) ---------- */
 
   function log(event, data) {
-    if (!CONFIG.logUrl) return;
+    if (!CONFIG.logUrl || PREVIEW || CLOSED) return;
     var payload = Object.assign({ type: 'checker', event: event, from: from, at: new Date().toISOString() }, data || {});
     try {
       fetch(CONFIG.logUrl, {
@@ -354,6 +360,27 @@
     }
   }
 
+  function renderClosed() {
+    app.textContent = '';
+    app.appendChild(el('section', { className: 'card result-card' }, [
+      el('div', { className: 'bin', style: '--bin:#3a3f4b' }, [
+        el('span', { className: 'bin-caption', text: '분리배출 판별기' }),
+        el('h1', { className: 'bin-name', text: '🔒 준비 중' }),
+      ]),
+      el('p', { className: 'why', text: SITE.closedMessage || '' }),
+      el('div', { className: 'actions' }, [
+        el('a', { className: 'btn ghost', href: '../', text: '첫 화면으로', style: 'display:grid;place-items:center;text-decoration:none' }),
+      ]),
+    ]));
+  }
+
+  if (CLOSED) {
+    renderClosed();
+    return;
+  }
+  if (PREVIEW) {
+    document.body.insertAdjacentHTML('afterbegin', '<p style="margin:0;padding:8px 16px;background:#fff3dc;color:#7a5300;font-size:14px;text-align:center">미리보기: 판별 기록이 시트에 저장되지 않아요. (팀원 확인용)</p>');
+  }
   window.addEventListener('popstate', route);
   log('visit');
   route();
