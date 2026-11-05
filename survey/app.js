@@ -442,6 +442,7 @@
         el('li', { text: '익명 설문 · 학번과 이름을 묻지 않아요' }),
         el('li', { text: '퀴즈 ' + QUIZ.length + '문항 + 간단한 질문 · 약 3분' }),
         deadline ? el('li', { text: '응답 마감: ' + deadline }) : null,
+        PHASE_INFO.reward ? el('li', { text: '참여하면 선착순으로 소정의 간식을 드려요 🍪' }) : null,
       ]),
       PREVIEW ? el('p', { className: 'notice', text: '미리보기: 응답이 시트에 저장되지 않아요. (팀원 확인용)' })
         : !SUBMIT_URL ? el('p', { className: 'notice', text: '테스트 모드: 제출한 응답은 이 기기에만 저장됩니다.' }) : null,
@@ -531,12 +532,25 @@
     ]);
   }
 
+  // 간식 받을 때 보여줄 확인 상자: 제출 시각을 크게 보여줘 오래된 캡처와 구분
+  function renderReward() {
+    var t = state.submittedAt ? new Date(state.submittedAt) : new Date();
+    var pad = function (n) { return (n < 10 ? '0' : '') + n; };
+    var when = (t.getMonth() + 1) + '월 ' + t.getDate() + '일 ' + pad(t.getHours()) + ':' + pad(t.getMinutes());
+    return el('div', { className: 'reward' }, [
+      el('p', { className: 'reward-title', text: '🍪 간식 받기' }),
+      el('p', { className: 'reward-text', text: PHASE_INFO.reward }),
+      el('p', { className: 'reward-time', text: PHASE_INFO.label + ' 제출 · ' + when }),
+    ]);
+  }
+
   function renderDone() {
     var testMode = !SUBMIT_URL;
     app.appendChild(el('section', { className: 'card done' }, [
       el('div', { className: 'done-icon', 'aria-hidden': 'true', text: '✓' }),
       el('h2', { text: '제출이 완료되었어요!' }),
       el('p', { className: 'lead', text: '소중한 응답 고마워요. ' + PHASE_INFO.doneMessage }),
+      PHASE_INFO.reward ? renderReward() : null,
       PHASE === 'post' ? renderResults(state.answers) : null,
       testMode ? el('p', { className: 'notice', text: '테스트 모드로 제출되어 이 기기에만 저장되었습니다.' }) : null,
       testMode ? el('div', { className: 'actions center' }, [
@@ -643,6 +657,7 @@
     request.then(function () {
       storageRemove(DRAFT_KEY);
       storageSet(SUBMITTED_KEY, payload.submittedAt);
+      state.submittedAt = payload.submittedAt;
       state.step = SECTIONS.length;
       render();
       window.scrollTo({ top: 0, behavior: 'smooth' });
