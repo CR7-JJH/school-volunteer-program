@@ -398,3 +398,12 @@ a.btn { display: inline-flex; align-items: center; justify-content: center; text
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
+
+.phase-notice {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border-left: 4px solid var(--primary);
+  border-radius: 8px;
+  background: var(--primary-soft);
+  font-weight: 700;
+}

@@ -453,12 +453,13 @@
       el('p', { className: 'eyebrow', text: '분리배출 디버깅 프로젝트 · ' + PHASE_INFO.label }),
       el('h1', { text: PHASE_INFO.title }),
       el('p', { className: 'lead', text: PHASE_INFO.intro }),
+      PHASE_INFO.notice ? el('p', { className: 'phase-notice', text: '📌 ' + PHASE_INFO.notice }) : null,
       el('div', { className: 'slogan' }, [
         el('span', { className: 'slogan-label', text: '버리기 전 3초 if문' }),
         el('code', { text: 'if (비웠나 && 헹궜나 && 뗐나) → 재활용 TRUE' }),
       ]),
       el('ul', { className: 'meta-list' }, [
-        el('li', { text: '학년·반·번호를 적어요 · 이름은 묻지 않아요' }),
+        el('li', { text: PHASE === 'post' ? '사전 설문 때와 같은 학년·반·번호를 적어요 · 이름은 묻지 않아요' : '학년·반·번호를 적어요 · 이름은 묻지 않아요' }),
         el('li', { text: '퀴즈 ' + QUIZ.length + '문항 + 간단한 질문 · 약 3분' }),
         deadline ? el('li', { text: '응답 마감: ' + deadline }) : null,
         PHASE_INFO.reward ? el('li', { text: '참여하면 선착순 30명에게 소정의 간식을 드려요 🍪' }) : null,
@@ -467,6 +468,12 @@
         : !SUBMIT_URL ? el('p', { className: 'notice', text: '테스트 모드: 제출한 응답은 이 기기에만 저장됩니다.' }) : null,
       actions,
     ]));
+  }
+
+  // description 이 { pre, post } 형태면 지금 설문 종류에 맞는 문구를 고른다
+  function sectionDescription(section) {
+    var d = section.description;
+    return d && typeof d === 'object' ? d[PHASE] || '' : d || '';
   }
 
   function renderSection() {
@@ -488,7 +495,7 @@
     }, [
       el('p', { className: 'eyebrow', text: 'STEP ' + (state.step + 1) }),
       el('h2', { text: section.title }),
-      section.description ? el('p', { className: 'lead', text: section.description }) : null,
+      sectionDescription(section) ? el('p', { className: 'lead', text: sectionDescription(section) }) : null,
       el('div', { className: 'questions' }, section.questions.map(renderQuestion)),
       isLast ? el('p', { className: 'privacy', text: SURVEY.privacyNotice }) : null,
       el('p', { className: 'submit-error', role: 'alert' }),
