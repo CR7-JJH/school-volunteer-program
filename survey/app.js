@@ -442,7 +442,7 @@
         el('li', { text: '익명 설문 · 학번과 이름을 묻지 않아요' }),
         el('li', { text: '퀴즈 ' + QUIZ.length + '문항 + 간단한 질문 · 약 3분' }),
         deadline ? el('li', { text: '응답 마감: ' + deadline }) : null,
-        PHASE_INFO.reward ? el('li', { text: '참여하면 선착순으로 소정의 간식을 드려요 🍪' }) : null,
+        PHASE_INFO.reward ? el('li', { text: '참여하면 선착순 30명에게 소정의 간식을 드려요 🍪' }) : null,
       ]),
       PREVIEW ? el('p', { className: 'notice', text: '미리보기: 응답이 시트에 저장되지 않아요. (팀원 확인용)' })
         : !SUBMIT_URL ? el('p', { className: 'notice', text: '테스트 모드: 제출한 응답은 이 기기에만 저장됩니다.' }) : null,
