@@ -47,13 +47,13 @@ window.SURVEY = {
   },
 
   privacyNotice:
-    '이 설문은 익명이며 학번·이름을 수집하지 않습니다. 응답은 캠페인 효과 분석에만 사용됩니다.',
+    '학년·반·번호는 응답 확인에만 쓰고, 캠페인이 끝나면(11월 30일) 지웁니다. 이름은 묻지 않습니다.',
 
   sections: [
     {
       id: 'basic',
       title: '시작하기',
-      description: '응답 비교를 위해 학년만 알려주세요.',
+      description: '응답 확인을 위해 학년, 반, 번호를 적어 주세요. 이름은 묻지 않아요.',
       questions: [
         {
           id: 'grade',
@@ -65,6 +65,21 @@ window.SURVEY = {
             { value: '1', label: '1학년' },
             { value: '2', label: '2학년' },
           ],
+        },
+        { id: 'classNo', type: 'number', label: '반', required: true, min: 1, max: 20, placeholder: '예: 3' },
+        { id: 'studentNo', type: 'number', label: '번호', required: true, min: 1, max: 50, placeholder: '예: 15' },
+        {
+          id: 'privacyAgree',
+          type: 'consent',
+          label: '개인정보 수집·이용 동의',
+          required: true,
+          text:
+            '• 수집 항목: 학년, 반, 번호\n' +
+            '• 이용 목적: 중복 응답 확인, 반별 참여 현황 파악, 간식 지급 확인\n' +
+            '• 보유 기간: 캠페인 종료(11월 30일) 후 즉시 파기\n' +
+            '• 이름은 수집하지 않으며, 결과는 개인을 알 수 없는 통계로만 공개합니다.\n' +
+            '동의하지 않으면 설문에 참여할 수 없어요.',
+          checkLabel: '위 내용을 확인했고, 개인정보 수집·이용에 동의합니다.',
         },
       ],
     },

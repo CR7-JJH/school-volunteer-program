@@ -325,6 +325,24 @@
     }));
   }
 
+  function renderConsent(q, value) {
+    return el('div', null, [
+      el('div', { className: 'consent-box', text: q.text }),
+      el('label', { className: 'choice consent-check' }, [
+        el('input', {
+          type: 'checkbox',
+          name: q.id,
+          checked: value === true,
+          onchange: function (e) {
+            state.answers[q.id] = e.target.checked ? true : undefined;
+            onAnswerChange(q);
+          },
+        }),
+        el('span', { className: 'choice-label', text: q.checkLabel }),
+      ]),
+    ]);
+  }
+
   function renderControl(q) {
     var value = state.answers[q.id];
     switch (q.type) {
@@ -335,6 +353,7 @@
       case 'multi':
       case 'quiz': return renderChoices(q, value);
       case 'scale': return renderScale(q, value);
+      case 'consent': return renderConsent(q, value);
     }
     return null;
   }
@@ -439,7 +458,7 @@
         el('code', { text: 'if (비웠나 && 헹궜나 && 뗐나) → 재활용 TRUE' }),
       ]),
       el('ul', { className: 'meta-list' }, [
-        el('li', { text: '익명 설문 · 학번과 이름을 묻지 않아요' }),
+        el('li', { text: '학년·반·번호를 적어요 · 이름은 묻지 않아요' }),
         el('li', { text: '퀴즈 ' + QUIZ.length + '문항 + 간단한 질문 · 약 3분' }),
         deadline ? el('li', { text: '응답 마감: ' + deadline }) : null,
         PHASE_INFO.reward ? el('li', { text: '참여하면 선착순 30명에게 소정의 간식을 드려요 🍪' }) : null,
