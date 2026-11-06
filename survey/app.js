@@ -193,6 +193,10 @@
         if (isOtherSelected(q)) answers[otherKey(q)] = String(state.answers[otherKey(q)] || '').trim();
       });
     });
+    // 학번 = 학년 + 반 + 번호 두 자리 (예: 1학년 2반 5번 → 1205). 시트의 '학번' 열에 들어간다
+    if (answers.grade && answers.classNo && answers.studentNo) {
+      answers['학번'] = String(answers.grade) + answers.classNo + (answers.studentNo < 10 ? '0' : '') + answers.studentNo;
+    }
     return {
       phase: PHASE,
       submittedAt: new Date().toISOString(),
