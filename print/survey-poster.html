@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>사전 설문 QR 포스터</title>
+<!-- 사전설문_QR_포스터.pdf 의 원본. 문구를 고친 뒤 크롬에서 열고 Ctrl+P → PDF로 저장 (여백 없음, 배경 그래픽 켜기) -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap">
+<style>
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans KR', sans-serif; color: #1f2633; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  .page { width: 210mm; height: 297mm; position: relative; overflow: hidden; page-break-after: always; }
+  .page:last-child { page-break-after: auto; }
+  .accent { color: #2e8b57; }
+
+  /* 1쪽: A4 포스터 */
+  .p1 { text-align: center; padding-top: 18mm; }
+  .p1 h1 { font-size: 44pt; font-weight: 900; line-height: 1.3; letter-spacing: -1px; }
+  .p1 .sub { font-size: 15pt; color: #6b7280; margin-top: 4mm; }
+  .p1 .qrbox { width: 92mm; height: 92mm; margin: 10mm auto 0; border: 1.2mm solid #2e8b57; border-radius: 6mm; padding: 6mm; }
+  .p1 .qrbox svg { width: 100%; height: 100%; display: block; }
+  .p1 .cta { font-size: 20pt; font-weight: 700; margin-top: 7mm; }
+  .p1 .meta { font-size: 12pt; color: #374151; margin-top: 3mm; }
+  .p1 .meta b { font-weight: 700; }
+  .snack { margin: 11mm 18mm 0; border: 0.6mm dashed #e07b20; background: #fff6ea; border-radius: 5mm; padding: 5mm 7mm; display: flex; align-items: center; gap: 6mm; text-align: left; }
+  .snack .icon { font-size: 34pt; }
+  .snack .big { font-size: 17pt; font-weight: 900; color: #d4600f; }
+  .snack .small { font-size: 10.5pt; color: #4b5563; margin-top: 1.5mm; }
+  .band { position: absolute; left: 0; right: 0; bottom: 0; height: 30mm; background: #1c2a24; color: #fff; display: flex; justify-content: space-between; align-items: center; padding: 0 16mm; }
+  .band .team { font-size: 22pt; font-weight: 900; }
+  .band .team small { display: block; font-size: 9pt; font-weight: 400; opacity: .85; }
+  .band .proj { text-align: right; font-size: 13pt; font-weight: 700; }
+  .band .tag { display: inline-block; margin-top: 2mm; background: #a3e07a; color: #1c2a24; font-size: 10pt; padding: 0.8mm 4mm; border-radius: 10mm; }
+
+  /* 2쪽: 6칸 카드 */
+  .p2 { padding: 10mm 10mm; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, 1fr); gap: 6mm; }
+  .card { border: 0.3mm dashed #9ca3af; border-radius: 4mm; overflow: hidden; display: flex; flex-direction: column; text-align: center; }
+  .card .body { flex: 1; padding-top: 6mm; }
+  .card h2 { font-size: 13pt; font-weight: 900; line-height: 1.35; }
+  .card .qr { width: 38mm; height: 38mm; margin: 3mm auto 0; }
+  .card .qr svg { width: 100%; height: 100%; display: block; }
+  .card .meta { font-size: 8pt; color: #6b7280; margin-top: 2mm; }
+  .card .gift { display: inline-block; margin-top: 2mm; background: #fff1de; color: #d4600f; font-size: 8.5pt; font-weight: 700; padding: 1mm 3mm; border-radius: 2mm; }
+  .card .foot { background: #1c2a24; color: #fff; font-size: 7.5pt; padding: 2.2mm 0; }
+  .card .foot b { font-weight: 900; font-size: 9pt; }
+  .card .foot span { color: #a3e07a; }
+</style>
+</head>
+<body>
+<section class="page p1">
+  <h1>분리배출,<br>나는 얼마나 알고 있을까?</h1>
+  <p class="sub">우리 학교 분리수거함 속 ‘오류’를 찾는 첫걸음!</p>
+  <div class="qrbox" data-qr></div>
+  <p class="cta">📱 카메라로 QR을 찍어 참여하세요</p>
+  <p class="meta"><b>약 3분</b> · 퀴즈 8문항 · 학년·반·번호 기재 · 마감 <b>11월 9일(월)</b></p>
+  <div class="snack">
+    <div class="icon">🍪</div>
+    <div>
+      <p class="big">학번을 적어 주신 분들 중<br>선착순 30명에게 간식을 드려요!</p>
+      <p class="small">설문을 마친 뒤 나오는 <b>제출 완료 화면</b>을 대.환.책 팀원에게 보여주세요.</p>
+    </div>
+  </div>
+  <div class="band">
+    <div class="team">대.환.책<small>대영의 환경을 책임진다</small></div>
+    <div class="proj">분리배출 디버깅 프로젝트<br><span class="tag">사전 설문</span></div>
+  </div>
+</section>
+
+<section class="page p2" id="cards"></section>
+
+<script src="../checker/vendor/qrcode.js"></script>
+<script>
+  var URL_ = 'https://cr7-jjh.github.io/school-volunteer-program/survey/';
+  function svg() {
+    var qr = qrcode(0, 'M'); qr.addData(URL_); qr.make();
+    return qr.createSvgTag({ cellSize: 4, margin: 0, scalable: true });
+  }
+  document.querySelector('[data-qr]').innerHTML = svg();
+  var card = '<div class="card"><div class="body">' +
+    '<h2>분리배출,<br>나는 얼마나 알고 있을까?</h2>' +
+    '<div class="qr">' + svg() + '</div>' +
+    '<p class="meta">약 3분 · 퀴즈 8문항 · 마감 11/9(월)</p>' +
+    '<p class="gift">🍪 학번을 적으면 선착순 30명 간식!</p>' +
+    '</div><div class="foot"><b>대.환.책</b> · 분리배출 디버깅 프로젝트 · <span>사전 설문</span></div></div>';
+  document.getElementById('cards').innerHTML = new Array(7).join(card);
+</script>
+</body>
+</html>
