@@ -413,7 +413,10 @@
   function renderIntro() {
     var draft = storageGet(DRAFT_KEY);
     var hasDraft = draft && draft.answers && Object.keys(draft.answers).length > 0;
-    var alreadySubmitted = !!storageGet(SUBMITTED_KEY);
+    var submittedAt = storageGet(SUBMITTED_KEY);
+    var alreadySubmitted = !!submittedAt;
+    // 학번을 받기 전에 제출한 기기: 그 응답은 삭제되었으니 다시 참여하도록 안내
+    var needsRedo = alreadySubmitted && PHASE_INFO.redoBefore && String(submittedAt) < PHASE_INFO.redoBefore;
     var deadline = CONFIG.deadline && CONFIG.deadline[PHASE];
 
     function start(fromDraft) {
@@ -429,7 +432,17 @@
     }
 
     var actions;
-    if (alreadySubmitted && !hasDraft) {
+    if (needsRedo && !hasDraft) {
+      actions = el('div', null, [
+        el('p', { className: 'notice', text: PHASE_INFO.redoMessage }),
+        el('div', { className: 'actions' }, [
+          el('button', {
+            className: 'btn primary', type: 'button', text: '학번 적고 다시 참여하기',
+            onclick: function () { start(false); },
+          }),
+        ]),
+      ]);
+    } else if (alreadySubmitted && !hasDraft) {
       actions = el('div', null, [
         el('p', { className: 'notice', text: '이 기기에서 이미 ' + PHASE_INFO.label + '을 제출했어요. 참여해줘서 고마워요!' }),
         el('div', { className: 'actions' }, [
@@ -457,7 +470,7 @@
       el('p', { className: 'eyebrow', text: '분리배출 디버깅 프로젝트 · ' + PHASE_INFO.label }),
       el('h1', { text: PHASE_INFO.title }),
       el('p', { className: 'lead', text: PHASE_INFO.intro }),
-      PHASE_INFO.notice ? el('p', { className: 'phase-notice', text: '📌 ' + PHASE_INFO.notice }) : null,
+      PHASE_INFO.notice ? el('p', { className: 'phase-notice', text: PHASE_INFO.notice }) : null,
       el('div', { className: 'slogan' }, [
         el('span', { className: 'slogan-label', text: '버리기 전 3초 if문' }),
         el('code', { text: 'if (비웠나 && 헹궜나 && 뗐나) → 재활용 TRUE' }),
@@ -466,7 +479,6 @@
         el('li', { text: PHASE === 'post' ? '사전 설문 때와 같은 학년·반·번호를 적어요 · 이름은 묻지 않아요' : '학년·반·번호를 적어요 · 이름은 묻지 않아요' }),
         el('li', { text: '퀴즈 ' + QUIZ.length + '문항 + 간단한 질문 · 약 3분' }),
         deadline ? el('li', { text: '응답 마감: ' + deadline }) : null,
-        PHASE_INFO.reward ? el('li', { text: '참여하면 선착순 30명에게 소정의 간식을 드려요 🍪' }) : null,
       ]),
       PREVIEW ? el('p', { className: 'notice', text: '미리보기: 응답이 시트에 저장되지 않아요. (팀원 확인용)' })
         : !SUBMIT_URL ? el('p', { className: 'notice', text: '테스트 모드: 제출한 응답은 이 기기에만 저장됩니다.' }) : null,
