@@ -159,6 +159,24 @@
     return null;
   }
 
+  // 0..upTo 단계 중 필수 응답이 빠진 첫 단계 (없으면 -1).
+  // 문항이 추가되기 전에 임시저장한 기기가 '이어서 작성하기'로 앞 단계를 건너뛰지 않도록 쓴다
+  function firstIncompleteStep(upTo) {
+    for (var i = 0; i < SECTIONS.length && i <= upTo; i++) {
+      var missing = SECTIONS[i].questions.some(function (q) { return isVisible(q) && validateQuestion(q); });
+      if (missing) return i;
+    }
+    return -1;
+  }
+
+  // 빠진 단계로 보내고, 다 채우면 원래 있던 단계(returnTo)로 돌아온다
+  function goFix(step, returnTo) {
+    state.fixStep = step;
+    state.returnStep = returnTo;
+    state.step = step;
+    go();
+  }
+
   // 퀴즈 채점: 총점과 오류 유형별 점수
   function scoreQuiz() {
     var scores = { quizScore: 0, quizTotal: QUIZ.length };
@@ -420,9 +438,13 @@
     var deadline = CONFIG.deadline && CONFIG.deadline[PHASE];
 
     function start(fromDraft) {
+      state.fixStep = undefined;
+      state.returnStep = undefined;
       if (fromDraft) {
         state.answers = draft.answers;
         state.step = Math.max(0, Math.min(draft.step, SECTIONS.length - 1));
+        var gap = firstIncompleteStep(state.step - 1);
+        if (gap !== -1) return goFix(gap, state.step);
       } else {
         storageRemove(DRAFT_KEY);
         state.answers = {};
@@ -502,8 +524,22 @@
       onsubmit: function (e) {
         e.preventDefault();
         if (!validateSection(form, section)) return;
-        if (isLast) submit(form);
-        else {
+        // 제출·복귀 전에 앞 단계를 다시 확인 (빠진 필수 응답이 있으면 그 단계로)
+        if (isLast || state.returnStep !== undefined) {
+          var gap = firstIncompleteStep(state.step - 1);
+          if (gap !== -1) return goFix(gap, isLast ? state.step : state.returnStep);
+        }
+        state.fixStep = undefined;
+        if (state.returnStep !== undefined && state.returnStep > state.step) {
+          var gapAfter = firstIncompleteStep(state.returnStep - 1);
+          if (gapAfter !== -1) return goFix(gapAfter, state.returnStep);
+          state.step = state.returnStep;
+          state.returnStep = undefined;
+          go();
+        } else if (isLast) {
+          state.returnStep = undefined;
+          submit(form);
+        } else {
           state.step += 1;
           go();
         }
@@ -512,6 +548,10 @@
       el('p', { className: 'eyebrow', text: 'STEP ' + (state.step + 1) }),
       el('h2', { text: section.title }),
       sectionDescription(section) ? el('p', { className: 'lead', text: sectionDescription(section) }) : null,
+      state.fixStep === state.step ? el('p', {
+        className: 'notice',
+        text: '이 단계에 아직 채우지 않은 필수 항목이 있어요. 채운 뒤 ‘' + (isLast ? '제출하기' : '다음') + '’를 누르면 하던 곳으로 돌아가요. 앞서 고른 답은 그대로 남아 있어요.',
+      }) : null,
       el('div', { className: 'questions' }, section.questions.map(renderQuestion)),
       isLast ? el('p', { className: 'privacy', text: SURVEY.privacyNotice }) : null,
       el('p', { className: 'submit-error', role: 'alert' }),
