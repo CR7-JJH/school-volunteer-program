@@ -5,6 +5,7 @@
  * 사전 설문은 '사전' 시트, 사후 설문은 '사후' 시트,
  * 판별 웹페이지 접속·판별 기록은 '판별기록' 시트에 한 줄씩 쌓입니다.
  * 새로운 문항이 추가되면 열이 자동으로 늘어납니다.
+ * 같은 설문에 이미 있는 학번으로 다시 제출하면 저장하지 않습니다.
  */
 
 var SPREADSHEET_NAME = '분리배출 디버깅 응답';
@@ -52,6 +53,11 @@ function doPost(e) {
       row[key] = Array.isArray(value) ? value.join(', ') : value;
     });
 
+    // 한 사람당 한 번: 같은 시트에 이미 있는 학번이면 저장하지 않는다
+    if (answers['학번'] && hasStudentId_(sheet, answers['학번'])) {
+      return json_({ ok: false, duplicate: true });
+    }
+
     appendRow_(sheet, row);
     return json_({ ok: true });
   } catch (err) {
@@ -62,8 +68,16 @@ function doPost(e) {
 }
 
 // 브라우저에서 웹 앱 주소(/exec)를 열면 연결 상태를 보여준다
-function doGet() {
+// ?check=학번&phase=pre|post 로 부르면 그 설문에 이미 참여한 학번인지만 알려준다 (설문 1단계에서 사용)
+function doGet(e) {
+  var params = (e && e.parameter) || {};
   try {
+    if (params.check !== undefined) {
+      var id = String(params.check).trim();
+      var name = SHEET_NAMES[params.phase];
+      var target = name && /^\d{3,5}$/.test(id) ? getSpreadsheet_().getSheetByName(name) : null;
+      return json_({ ok: true, taken: hasStudentId_(target, id) });
+    }
     var ss = getSpreadsheet_();
     return json_({ ok: true, message: '설문 수집 서버가 동작 중입니다.', spreadsheet: ss.getName(), url: ss.getUrl() });
   } catch (err) {
@@ -93,6 +107,20 @@ function getSpreadsheet_() {
   ss = SpreadsheetApp.create(SPREADSHEET_NAME);
   props.setProperty('SPREADSHEET_ID', ss.getId());
   return ss;
+}
+
+// 시트의 '학번' 열에 id 가 있는지 (숫자로 저장된 학번도 문자열로 비교)
+function hasStudentId_(sheet, id) {
+  if (!sheet || !id) return false;
+  var lastRow = sheet.getLastRow();
+  var lastCol = sheet.getLastColumn();
+  if (lastRow < 2 || lastCol < 1) return false;
+  var col = sheet.getRange(1, 1, 1, lastCol).getValues()[0].indexOf('학번');
+  if (col === -1) return false;
+  id = String(id).trim();
+  return sheet.getRange(2, col + 1, lastRow - 1, 1).getValues().some(function (r) {
+    return String(r[0]).trim() === id;
+  });
 }
 
 function appendRow_(sheet, row) {

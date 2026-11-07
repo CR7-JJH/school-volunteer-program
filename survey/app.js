@@ -21,6 +21,8 @@
   var SITE = (window.SITE_CONFIG || {})[PHASE === 'post' ? 'postSurvey' : 'preSurvey'] || {};
   var CLOSED = SITE.open === false && !PREVIEW;
   var SUBMIT_URL = PREVIEW ? '' : CONFIG.submitUrl;
+  // 학번 중복 확인은 읽기만 하므로 미리보기에서도 한다
+  var CHECK_URL = CONFIG.submitUrl || '';
 
   function inPhase(item) {
     return !item.phase || item.phase === PHASE;
@@ -29,6 +31,12 @@
   var SECTIONS = SURVEY.sections.filter(inPhase).map(function (s) {
     return Object.assign({}, s, { questions: s.questions.filter(inPhase) });
   });
+  // 학년·반·번호를 묻는 단계 (학번 중복 확인을 하는 곳)
+  var ID_STEP = -1;
+  SECTIONS.forEach(function (s, i) {
+    if (ID_STEP === -1 && s.questions.some(function (q) { return q.id === 'studentNo'; })) ID_STEP = i;
+  });
+  var ID_FIELDS = ['grade', 'classNo', 'studentNo'];
   var QUIZ = [];
   SECTIONS.forEach(function (s) {
     s.questions.forEach(function (q) {
@@ -159,6 +167,59 @@
     return null;
   }
 
+  // 학번 = 학년 + 반 + 번호 두 자리 (예: 1학년 2반 5번 → 1205). 시트의 '학번' 열에 들어간다
+  function studentId(a) {
+    if (isEmpty(a.grade) || isEmpty(a.classNo) || isEmpty(a.studentNo)) return '';
+    var c = Number(a.classNo);
+    var n = Number(a.studentNo);
+    return String(a.grade) + c + (n < 10 ? '0' : '') + n;
+  }
+
+  // 시트에 이미 같은 학번이 있으면 true. 연결 실패·시간 초과·옛 서버면 false (참여를 막지 않는다)
+  function isTaken(id) {
+    if (!CHECK_URL || !window.fetch) return Promise.resolve(false);
+    var url = CHECK_URL + (CHECK_URL.indexOf('?') === -1 ? '?' : '&') +
+      'check=' + encodeURIComponent(id) + '&phase=' + encodeURIComponent(PHASE);
+    var request = fetch(url)
+      .then(function (r) { return r.json(); })
+      .then(function (d) { return !!d && d.taken === true; })
+      .catch(function () { return false; });
+    var timeout = new Promise(function (resolve) { setTimeout(function () { resolve(false); }, 8000); });
+    return Promise.race([request, timeout]);
+  }
+
+  function duplicateMessage(id) {
+    return id + '은(는) 이미 ' + PHASE_INFO.label + '에 참여한 학번이에요. 설문은 한 사람당 한 번만 참여할 수 있어요. ' +
+      '학년·반·번호를 잘못 적었다면 고쳐 주세요.';
+  }
+
+  // 학번 단계를 넘어갈 때와 제출 직전에 확인. 이미 있으면 다음으로 못 넘어간다
+  function checkDuplicate(form, next) {
+    var id = studentId(state.answers);
+    if (!id || ID_STEP === -1) return next();
+    var button = form.querySelector('button[type="submit"]');
+    var label = button.textContent;
+    var errorBox = form.querySelector('.submit-error');
+    errorBox.textContent = '';
+    button.disabled = true;
+    button.textContent = '학번 확인 중…';
+    isTaken(id).then(function (taken) {
+      button.disabled = false;
+      button.textContent = label;
+      if (!taken) return next();
+      if (state.step !== ID_STEP) {
+        // 이어서 작성하다 제출하는 경우: 학번 단계로 보내고, 고치면 지금 단계로 돌아온다
+        state.duplicateId = id;
+        state.returnStep = state.step;
+        state.step = ID_STEP;
+        go();
+        return;
+      }
+      errorBox.textContent = duplicateMessage(id);
+      errorBox.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  }
+
   // 0..upTo 단계 중 필수 응답이 빠진 첫 단계 (없으면 -1).
   // 문항이 추가되기 전에 임시저장한 기기가 '이어서 작성하기'로 앞 단계를 건너뛰지 않도록 쓴다
   function firstIncompleteStep(upTo) {
@@ -211,10 +272,8 @@
         if (isOtherSelected(q)) answers[otherKey(q)] = String(state.answers[otherKey(q)] || '').trim();
       });
     });
-    // 학번 = 학년 + 반 + 번호 두 자리 (예: 1학년 2반 5번 → 1205). 시트의 '학번' 열에 들어간다
-    if (answers.grade && answers.classNo && answers.studentNo) {
-      answers['학번'] = String(answers.grade) + answers.classNo + (answers.studentNo < 10 ? '0' : '') + answers.studentNo;
-    }
+    var id = studentId(answers);
+    if (id) answers['학번'] = id;
     return {
       phase: PHASE,
       submittedAt: new Date().toISOString(),
@@ -440,6 +499,7 @@
     function start(fromDraft) {
       state.fixStep = undefined;
       state.returnStep = undefined;
+      state.duplicateId = undefined;
       if (fromDraft) {
         state.answers = draft.answers;
         state.step = Math.max(0, Math.min(draft.step, SECTIONS.length - 1));
@@ -529,20 +589,8 @@
           var gap = firstIncompleteStep(state.step - 1);
           if (gap !== -1) return goFix(gap, isLast ? state.step : state.returnStep);
         }
-        state.fixStep = undefined;
-        if (state.returnStep !== undefined && state.returnStep > state.step) {
-          var gapAfter = firstIncompleteStep(state.returnStep - 1);
-          if (gapAfter !== -1) return goFix(gapAfter, state.returnStep);
-          state.step = state.returnStep;
-          state.returnStep = undefined;
-          go();
-        } else if (isLast) {
-          state.returnStep = undefined;
-          submit(form);
-        } else {
-          state.step += 1;
-          go();
-        }
+        if (state.step === ID_STEP || isLast) checkDuplicate(form, function () { advance(form, isLast); });
+        else advance(form, isLast);
       },
     }, [
       el('p', { className: 'eyebrow', text: 'STEP ' + (state.step + 1) }),
@@ -551,6 +599,9 @@
       state.fixStep === state.step ? el('p', {
         className: 'notice',
         text: '이 단계에 아직 채우지 않은 필수 항목이 있어요. 채운 뒤 ‘' + (isLast ? '제출하기' : '다음') + '’를 누르면 하던 곳으로 돌아가요. 앞서 고른 답은 그대로 남아 있어요.',
+      }) : null,
+      state.duplicateId && state.step === ID_STEP ? el('p', {
+        className: 'notice dup-notice', role: 'alert', text: duplicateMessage(state.duplicateId),
       }) : null,
       el('div', { className: 'questions' }, section.questions.map(renderQuestion)),
       isLast ? el('p', { className: 'privacy', text: SURVEY.privacyNotice }) : null,
@@ -573,6 +624,24 @@
       ]),
     ]);
     app.appendChild(form);
+  }
+
+  function advance(form, isLast) {
+    state.fixStep = undefined;
+    state.duplicateId = undefined;
+    if (state.returnStep !== undefined && state.returnStep > state.step) {
+      var gapAfter = firstIncompleteStep(state.returnStep - 1);
+      if (gapAfter !== -1) return goFix(gapAfter, state.returnStep);
+      state.step = state.returnStep;
+      state.returnStep = undefined;
+      go();
+    } else if (isLast) {
+      state.returnStep = undefined;
+      submit(form);
+    } else {
+      state.step += 1;
+      go();
+    }
   }
 
   function labelOf(q, value) {
@@ -657,6 +726,13 @@
   // 선택형 문항은 화면을 다시 그려 조건부 문항·기타 입력칸·선택 개수를 갱신
   function onAnswerChange(q, isTyping) {
     saveDraft();
+    if (ID_FIELDS.indexOf(q.id) !== -1) {
+      state.duplicateId = undefined;
+      var dup = app.querySelector('.dup-notice');
+      if (dup) dup.remove();
+      var box = app.querySelector('.submit-error');
+      if (box) box.textContent = '';
+    }
     var node = app.querySelector('[data-qid="' + q.id + '"]');
     if (node && node.classList.contains('has-error')) showError(node, validateQuestion(q));
     if (isTyping) return;
