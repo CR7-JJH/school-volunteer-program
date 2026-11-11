@@ -83,7 +83,7 @@
     /* A4 안내판 */
     .poster { display: flex; flex-direction: column; padding: 16mm 16mm 12mm; }
     .poster .top { text-align: center; }
-    .poster .tag {
+    .poster .tag, .board .tag {
       display: inline-block;
       padding: 2mm 5mm;
       border-radius: 99px;
@@ -144,6 +144,42 @@
     .sticker .side { width: 26mm; flex-shrink: 0; text-align: center; font-size: 7.5pt; color: var(--muted); }
     .sticker .qr { margin-bottom: 1mm; }
 
+    /* TOP 5 안내판 */
+    .board { display: flex; flex-direction: column; padding: 11mm 14mm 9mm; }
+    .board .top { text-align: center; }
+    .board h2 { margin: 3mm 0 1mm; font-size: 28pt; line-height: 1.15; }
+    .board .en { margin: 0; color: var(--muted); font-size: 12pt; }
+    .board .basis { margin: 2mm 0 0; color: var(--muted); font-size: 10pt; }
+    .rows { display: flex; flex-direction: column; gap: 2.4mm; margin: 4.5mm 0 4mm; }
+    .row {
+      display: grid;
+      grid-template-columns: 11mm 20mm 1fr;
+      align-items: center;
+      gap: 3mm;
+      padding: 2.4mm 4mm;
+      border: 0.5mm solid #e6c9a8;
+      border-radius: 4mm;
+      background: #fff8f0;
+    }
+    .row .no {
+      display: grid; place-items: center;
+      width: 10mm; height: 10mm; border-radius: 50%;
+      background: var(--orange); color: #fff; font-weight: 900; font-size: 15pt;
+    }
+    .row .pic { font-size: 30pt; line-height: 1; text-align: center; }
+    .row .name { margin: 0; font-size: 15.5pt; font-weight: 800; }
+    .row .line { margin: 0.6mm 0 0; font-size: 11pt; line-height: 1.3; }
+    .row .x { color: #c2410c; }
+    .row .o { color: var(--green); }
+    .row .o b { font-weight: 900; }
+    .row .line-en { margin: 0.4mm 0 0; color: var(--muted); font-size: 8.5pt; }
+    .row .src { margin: 0.4mm 0 0; color: #8a93a6; font-size: 7.5pt; }
+    .board .scan { padding: 3mm 6mm; }
+    .board .scan .qr { width: 29mm; padding: 2mm; }
+    .board .scan b { font-size: 17pt; }
+    .board .scan .en { font-size: 10pt; }
+    .board .foot { display: flex; justify-content: space-between; margin-top: 3mm; color: var(--muted); font-size: 9pt; }
+
     @page { size: A4; margin: 0; }
     @media print {
       body { background: #fff; }
@@ -160,14 +196,15 @@
     <p>분리수거함마다 붙일 안내판과 투입구 옆 순서도 스티커를 만듭니다. 위치를 적으면 QR마다 위치가 기록되어, 어느 분리수거함에서 많이 찍었는지 알 수 있어요.</p>
 
     <label for="locations">분리수거함 위치 (한 줄에 하나)</label>
-    <textarea id="locations">1학년 복도
-2학년 복도</textarea>
-    <p class="hint">비워두면 위치 없이 한 장만 만들어요. 영문·숫자로 짧게 써도 됩니다. (예: 1F-A)</p>
+    <textarea id="locations">중간
+아레나</textarea>
+    <p class="hint">비워두면 위치 없이 한 장만 만들어요. 위치 이름은 짧게 써 주세요. 길면 QR이 촘촘해져 잘 안 찍혀요. (중간 = 1·2학년 쓰레기통 중간)</p>
 
     <label>종류</label>
     <div class="kinds">
       <label><input type="radio" name="kind" value="poster" checked> A4 안내판 (위치별 1장)</label>
       <label><input type="radio" name="kind" value="sticker"> 순서도 스티커 (위치별 8개)</label>
+      <label><input type="radio" name="kind" value="top5"> TOP 5 안내판 (위치별 1장)</label>
     </div>
 
     <button class="print-btn" type="button" id="print">인쇄하기</button>
@@ -176,6 +213,7 @@
   <div class="pages" id="pages"></div>
 
   <script src="config.js"></script>
+  <script src="items.js"></script>
   <script src="vendor/qrcode.js"></script>
   <script>
     (function () {
@@ -252,11 +290,61 @@
         return '<section class="page sheet">' + cells + '</section>';
       }
 
+      // config.js 의 top5 로 만드는 'TOP 5 안내판'
+      function top5Board(loc) {
+        var url = urlFor(loc);
+        var list = (CONFIG.top5 || []).map(function (t) {
+          var entry = typeof t === 'string' ? { id: t } : t || {};
+          var item = (window.ITEMS || []).filter(function (it) { return it.id === entry.id; })[0];
+          return item ? { item: item, e: entry } : null;
+        }).filter(Boolean).slice(0, 5);
+        if (!list.length) {
+          return '<section class="page board"><p>checker/config.js 의 top5 가 비어 있어요.</p></section>';
+        }
+        // '→' 뒤(버릴 곳)를 굵게
+        function right(text) {
+          var i = text.indexOf('→');
+          return i === -1 ? esc(text) : esc(text.slice(0, i + 1)) + ' <b>' + esc(text.slice(i + 1).trim()) + '</b>';
+        }
+        var rows = list.map(function (t, i) {
+          return '' +
+            '<div class="row">' +
+              '<span class="no">' + (i + 1) + '</span>' +
+              '<span class="pic" aria-hidden="true">' + esc(t.item.emoji) + '</span>' +
+              '<div>' +
+                '<p class="name">' + esc(t.item.name) + '</p>' +
+                (t.e.wrong ? '<p class="line x">❌ 많이 틀려요: ' + esc(t.e.wrong) + '</p>' : '') +
+                (t.e.right ? '<p class="line o">✅ ' + right(t.e.right) + '</p>' : '') +
+                (t.e.en ? '<p class="line-en">' + esc(t.e.en) + '</p>' : '') +
+                (t.e.source ? '<p class="src">' + esc(t.e.source) + '</p>' : '') +
+              '</div>' +
+            '</div>';
+        }).join('');
+        return '' +
+          '<section class="page board">' +
+            '<div class="top">' +
+              '<span class="tag">분리배출 디버깅 프로젝트</span>' +
+              '<h2>우리 층 분리배출 오류 TOP ' + list.length + '</h2>' +
+              '<p class="en">Top ' + list.length + ' sorting mistakes on our floor</p>' +
+              '<p class="basis">사전 쓰레기통 측정 3회(11/4·11/6·11/9)와 사전 설문 결과로 뽑았어요.</p>' +
+            '</div>' +
+            '<div class="rows">' + rows + '</div>' +
+            '<div class="scan">' +
+              '<div class="qr">' + qrSvg(url) + '</div>' +
+              '<div>' +
+                '<b>다른 물건도<br>QR 찍고 3초 판별!</b>' +
+                '<p class="en">Scan to check any other item.</p>' +
+              '</div>' +
+            '</div>' +
+            '<div class="foot"><span>대.환.책 · 대영고 R&amp;A 사회 참여 봉사</span><span>' + esc(loc || '') + '</span></div>' +
+          '</section>';
+      }
+
       function render() {
         var locs = textarea.value.split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
         if (!locs.length) locs = [''];
         var kind = document.querySelector('input[name="kind"]:checked').value;
-        pages.innerHTML = locs.map(kind === 'poster' ? poster : sticker).join('');
+        pages.innerHTML = locs.map({ poster: poster, sticker: sticker, top5: top5Board }[kind]).join('');
       }
 
       textarea.addEventListener('input', render);

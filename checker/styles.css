@@ -118,6 +118,10 @@ code, .stage, .trace, .slogan { font-family: ui-monospace, SFMono-Regular, Menlo
 .section-title { margin: 0 0 10px 4px; font-size: 16px; font-weight: 700; }
 .top5 { margin-bottom: 24px; }
 .top5 .item { border-color: var(--warn); background: var(--warn-soft); }
+.section-sub { margin: -4px 0 12px 4px; color: var(--muted); font-size: 13px; line-height: 1.5; }
+.item-grid.top5-grid { grid-template-columns: 1fr; }
+.item-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.item-hint { color: var(--muted); font-size: 13px; font-weight: 500; line-height: 1.35; }
 
 .item-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 

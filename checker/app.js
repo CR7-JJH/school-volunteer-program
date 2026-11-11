@@ -128,7 +128,7 @@
     return String(s).toLowerCase().replace(/\s+/g, '');
   }
 
-  function itemButton(item, rank) {
+  function itemButton(item, rank, hint) {
     return el('button', {
       className: 'item' + (item === UNKNOWN ? ' item-unknown' : ''),
       type: 'button',
@@ -136,7 +136,10 @@
     }, [
       rank ? el('span', { className: 'rank', text: String(rank) }) : null,
       el('span', { className: 'item-emoji', 'aria-hidden': 'true', text: item.emoji }),
-      el('span', { className: 'item-name', text: item.name }),
+      hint ? el('span', { className: 'item-text' }, [
+        el('span', { className: 'item-name', text: item.name }),
+        el('span', { className: 'item-hint', text: hint }),
+      ]) : el('span', { className: 'item-name', text: item.name }),
     ]);
   }
 
@@ -170,10 +173,18 @@
       },
     });
 
-    var top5 = (CONFIG.top5 || []).map(findItem).filter(Boolean).slice(0, 5);
+    // config.js 의 top5: 'id' 또는 { id, wrong, ... }
+    var top5 = (CONFIG.top5 || []).map(function (t) {
+      var entry = typeof t === 'string' ? { id: t } : t || {};
+      var item = findItem(entry.id);
+      return item ? { item: item, wrong: entry.wrong } : null;
+    }).filter(Boolean).slice(0, 5);
     var top5Block = top5.length ? el('section', { className: 'top5' }, [
       el('h2', { className: 'section-title', text: '우리 층에서 가장 많이 틀린 TOP ' + top5.length }),
-      el('div', { className: 'item-grid' }, top5.map(function (it, i) { return itemButton(it, i + 1); })),
+      el('p', { className: 'section-sub', text: '사전 쓰레기통 측정(11/4~11/9)과 설문 결과예요. 눌러서 올바른 방법을 확인해 보세요.' }),
+      el('div', { className: 'item-grid top5-grid' }, top5.map(function (t, i) {
+        return itemButton(t.item, i + 1, t.wrong ? '❌ ' + t.wrong : '');
+      })),
     ]) : el('div');
 
     fill('');

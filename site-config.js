@@ -15,7 +15,7 @@
  */
 window.SITE_CONFIG = {
   preSurvey: {
-    open: true,
+    open: false,
     closedMessage: '사전 설문은 마감되었어요. 참여해 줘서 고마워요!',
   },
   checker: {
