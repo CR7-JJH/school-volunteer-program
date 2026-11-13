@@ -19,7 +19,7 @@ window.SITE_CONFIG = {
     closedMessage: '사전 설문은 마감되었어요. 참여해 줘서 고마워요!',
   },
   checker: {
-    open: false,
+    open: true,
     closedMessage: '분리배출 판별기는 11월 13일(금)부터 열려요. 조금만 기다려 주세요!',
   },
   postSurvey: {
