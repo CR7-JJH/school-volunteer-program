@@ -23,7 +23,7 @@ window.SITE_CONFIG = {
     closedMessage: '분리배출 판별기는 11월 13일(금)부터 열려요. 조금만 기다려 주세요!',
   },
   postSurvey: {
-    open: false,
+    open: true,
     closedMessage: '사후 설문은 11월 25일(수)부터 열려요.',
   },
 };
